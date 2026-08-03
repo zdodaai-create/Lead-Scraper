@@ -1,37 +1,16 @@
 import React, { useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 
-import Login from './pages/Login';
-import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import SavedSearches from './pages/SavedSearches';
 import AllLeads from './pages/AllLeads';
 import Exports from './pages/Exports';
 import Settings from './pages/Settings';
 
-const ProtectedLayout = ({ children, searchQuery, setSearchQuery }) => {
-  const { user, loading } = useAuth();
-  const location = useLocation();
-
-  if (loading) {
-    return (
-      <div class="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-sm">
-        <div class="flex flex-col items-center gap-3">
-          <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span>Loading Lead Finder...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
+const AppLayout = ({ children, searchQuery, setSearchQuery }) => {
   return (
     <div class="flex min-h-screen bg-slate-950 text-slate-100">
       <Sidebar />
@@ -50,55 +29,60 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-
       <Route
         path="/"
         element={
-          <ProtectedLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
+          <AppLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
             <Dashboard searchQuery={searchQuery} />
-          </ProtectedLayout>
+          </AppLayout>
         }
+      />
+      <Route
+        path="/login"
+        element={<Navigate to="/" replace />}
+      />
+      <Route
+        path="/register"
+        element={<Navigate to="/" replace />}
       />
       <Route
         path="/find-leads"
         element={
-          <ProtectedLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
+          <AppLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
             <Dashboard searchQuery={searchQuery} />
-          </ProtectedLayout>
+          </AppLayout>
         }
       />
       <Route
         path="/saved-searches"
         element={
-          <ProtectedLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
+          <AppLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
             <SavedSearches />
-          </ProtectedLayout>
+          </AppLayout>
         }
       />
       <Route
         path="/leads"
         element={
-          <ProtectedLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
+          <AppLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
             <AllLeads searchQuery={searchQuery} />
-          </ProtectedLayout>
+          </AppLayout>
         }
       />
       <Route
         path="/exports"
         element={
-          <ProtectedLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
+          <AppLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
             <Exports />
-          </ProtectedLayout>
+          </AppLayout>
         }
       />
       <Route
         path="/settings"
         element={
-          <ProtectedLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
+          <AppLayout searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
             <Settings />
-          </ProtectedLayout>
+          </AppLayout>
         }
       />
 

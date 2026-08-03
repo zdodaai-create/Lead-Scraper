@@ -1,59 +1,35 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import { authService } from '../services/api';
+import React, { createContext, useState, useContext } from 'react';
 
 const AuthContext = createContext(null);
 
+const DEFAULT_USER = {
+  id: 1,
+  name: "Lead Finder Pro",
+  email: "demo@leadfinder.com",
+  role: "admin"
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('leadfinder_user');
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [token, setToken] = useState(() => localStorage.getItem('leadfinder_token'));
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(DEFAULT_USER);
+  const [token, setToken] = useState("direct_access_token");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const initAuth = async () => {
-      if (token) {
-        try {
-          const userData = await authService.getMe();
-          setUser(userData);
-          localStorage.setItem('leadfinder_user', JSON.stringify(userData));
-        } catch (err) {
-          logout();
-        }
-      }
-      setLoading(false);
-    };
-    initAuth();
-  }, [token]);
-
-  const login = async (email, password) => {
-    const data = await authService.login(email, password);
-    setToken(data.access_token);
-    setUser(data.user);
-    localStorage.setItem('leadfinder_token', data.access_token);
-    localStorage.setItem('leadfinder_user', JSON.stringify(data.user));
-    return data;
+  const login = async () => {
+    setUser(DEFAULT_USER);
+    return { user: DEFAULT_USER, access_token: "direct_access_token" };
   };
 
-  const register = async (name, email, password) => {
-    const data = await authService.register(name, email, password);
-    setToken(data.access_token);
-    setUser(data.user);
-    localStorage.setItem('leadfinder_token', data.access_token);
-    localStorage.setItem('leadfinder_user', JSON.stringify(data.user));
-    return data;
+  const register = async () => {
+    setUser(DEFAULT_USER);
+    return { user: DEFAULT_USER, access_token: "direct_access_token" };
   };
 
   const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('leadfinder_token');
-    localStorage.removeItem('leadfinder_user');
+    setUser(DEFAULT_USER);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading: false, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

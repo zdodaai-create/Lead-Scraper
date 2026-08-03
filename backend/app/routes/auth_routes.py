@@ -37,6 +37,18 @@ def login(user_in: UserLogin, db: Session = Depends(get_db)):
     clean_email = str(user_in.email).strip().lower()
     user = db.query(User).filter(User.email == clean_email).first()
 
+    # Auto-provision demo account on demand if missing from database
+    if not user and clean_email == "demo@leadfinder.com":
+        user = User(
+            name="Senior Software Architect",
+            email="demo@leadfinder.com",
+            hashed_password=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
     if not user or not verify_password(user_in.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
