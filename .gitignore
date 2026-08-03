@@ -1,0 +1,31 @@
+# Python & Environment
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+.env.local
+backend/.env
+
+# Database & Storage
+*.db
+*.sqlite3
+backend/lead_finder.db
+key_log.txt
+test_out.txt
+key_status.json
+
+# Node & Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+.npm
+.eslintcache
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
