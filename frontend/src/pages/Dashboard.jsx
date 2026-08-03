@@ -9,15 +9,16 @@ import Toast from '../components/Toast';
 import { searchService, leadService, exportService } from '../services/api';
 import { Users, Phone, Mail, Globe, AlertCircle, FileSpreadsheet, FileText, Trash2, AlertTriangle } from 'lucide-react';
 
-const Dashboard = ({ searchQuery }) => {
-  const [summary, setSummary] = useState({
-    total_leads: 0,
-    with_phone: 0,
-    with_email: 0,
-    with_website: 0,
-    without_email: 0,
-  });
+const DEFAULT_SUMMARY = {
+  total_leads: 0,
+  with_phone: 0,
+  with_email: 0,
+  with_website: 0,
+  without_email: 0,
+};
 
+const Dashboard = ({ searchQuery }) => {
+  const [summary, setSummary] = useState(DEFAULT_SUMMARY);
   const [leads, setLeads] = useState([]);
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
   const [activeSearchId, setActiveSearchId] = useState(null);
@@ -45,11 +46,23 @@ const Dashboard = ({ searchQuery }) => {
         limit: 50,
       });
 
-      setLeads(res.items);
-      setSummary(res.summary);
-      setPage(res.page);
-      setTotalPages(res.total_pages);
-      setTotalItems(res.total);
+      if (res) {
+        if (Array.isArray(res.items)) {
+          setLeads(res.items);
+        }
+        if (res.summary) {
+          setSummary({
+            total_leads: res.summary.total_leads || 0,
+            with_phone: res.summary.with_phone || 0,
+            with_email: res.summary.with_email || 0,
+            with_website: res.summary.with_website || 0,
+            without_email: res.summary.without_email || 0,
+          });
+        }
+        if (res.page) setPage(res.page);
+        if (res.total_pages) setTotalPages(res.total_pages);
+        if (res.total !== undefined) setTotalItems(res.total);
+      }
     } catch (err) {
       console.error('Error fetching leads:', err);
     }
@@ -64,20 +77,30 @@ const Dashboard = ({ searchQuery }) => {
     setSearchError('');
     try {
       const data = await searchService.findLeads(params);
-      setActiveSearchId(data.search.id);
-      setLeads(data.leads);
-      setSummary(data.summary);
-      setTotalItems(data.summary.total_leads);
-      setTotalPages(1);
-      setPage(1);
+      if (data) {
+        if (data.search?.id) setActiveSearchId(data.search.id);
+        if (Array.isArray(data.leads)) setLeads(data.leads);
+        if (data.summary) {
+          setSummary({
+            total_leads: data.summary.total_leads || 0,
+            with_phone: data.summary.with_phone || 0,
+            with_email: data.summary.with_email || 0,
+            with_website: data.summary.with_website || 0,
+            without_email: data.summary.without_email || 0,
+          });
+          setTotalItems(data.summary.total_leads || 0);
+        }
+        setTotalPages(1);
+        setPage(1);
 
-      if (data.summary.total_leads === 0) {
-        setSearchError('Google Places API returned 0 leads for this search. Please check your region/category or verify Places API permissions in Google Cloud Console.');
-      } else {
-        setToast({
-          message: `Found & enriched ${data.summary.total_leads} verified leads for ${params.region}!`,
-          type: 'success',
-        });
+        if (!data.summary || data.summary.total_leads === 0) {
+          setSearchError('Google Places API returned 0 leads for this search. Please check your region/category or verify Places API permissions in Google Cloud Console.');
+        } else {
+          setToast({
+            message: `Found & enriched ${data.summary.total_leads} verified leads for ${params.region}!`,
+            type: 'success',
+          });
+        }
       }
     } catch (err) {
       console.error(err);
@@ -106,10 +129,10 @@ const Dashboard = ({ searchQuery }) => {
   };
 
   const handleSelectAll = () => {
-    if (selectedLeadIds.length === leads.length) {
+    if (selectedLeadIds.length === (leads || []).length) {
       setSelectedLeadIds([]);
     } else {
-      setSelectedLeadIds(leads.map((l) => l.id));
+      setSelectedLeadIds((leads || []).map((l) => l.id));
     }
   };
 
@@ -117,7 +140,7 @@ const Dashboard = ({ searchQuery }) => {
     try {
       await leadService.updateLead(id, { lead_status: newStatus });
       setLeads((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, lead_status: newStatus } : l))
+        (prev || []).map((l) => (l.id === id ? { ...l, lead_status: newStatus } : l))
       );
       if (selectedLead && selectedLead.id === id) {
         setSelectedLead((prev) => ({ ...prev, lead_status: newStatus }));
@@ -132,7 +155,7 @@ const Dashboard = ({ searchQuery }) => {
     try {
       await leadService.updateLead(id, { notes: notesText });
       setLeads((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, notes: notesText } : l))
+        (prev || []).map((l) => (l.id === id ? { ...l, notes: notesText } : l))
       );
       if (selectedLead && selectedLead.id === id) {
         setSelectedLead((prev) => ({ ...prev, notes: notesText }));
@@ -147,8 +170,8 @@ const Dashboard = ({ searchQuery }) => {
     if (!window.confirm('Delete this lead record?')) return;
     try {
       await leadService.deleteLead(id);
-      setLeads((prev) => prev.filter((l) => l.id !== id));
-      setSelectedLeadIds((prev) => prev.filter((item) => item !== id));
+      setLeads((prev) => (prev || []).filter((l) => l.id !== id));
+      setSelectedLeadIds((prev) => (prev || []).filter((item) => item !== id));
       setToast({ message: 'Lead deleted', type: 'success' });
       fetchLeads(page);
     } catch (err) {
@@ -222,6 +245,8 @@ const Dashboard = ({ searchQuery }) => {
     fetchLeads(1, newSortBy, newSortOrder);
   };
 
+  const safeSummary = summary || DEFAULT_SUMMARY;
+
   return (
     <div class="space-y-6">
       {/* Search Form */}
@@ -247,35 +272,35 @@ const Dashboard = ({ searchQuery }) => {
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard
           title="Total Leads"
-          value={summary.total_leads}
+          value={safeSummary.total_leads || 0}
           icon={Users}
           color="blue"
           description="Verified place results"
         />
         <StatCard
           title="With Phone"
-          value={summary.with_phone}
+          value={safeSummary.with_phone || 0}
           icon={Phone}
           color="emerald"
           description="Public phone listed"
         />
         <StatCard
           title="With Email"
-          value={summary.with_email}
+          value={safeSummary.with_email || 0}
           icon={Mail}
           color="purple"
           description="Website enriched emails"
         />
         <StatCard
           title="With Website"
-          value={summary.with_website}
+          value={safeSummary.with_website || 0}
           icon={Globe}
           color="amber"
           description="Official domain found"
         />
         <StatCard
           title="Without Email"
-          value={summary.without_email}
+          value={safeSummary.without_email || 0}
           icon={AlertCircle}
           color="rose"
           description="No public email found"
@@ -324,7 +349,7 @@ const Dashboard = ({ searchQuery }) => {
 
       {/* Main Results Table */}
       <LeadTable
-        leads={leads}
+        leads={leads || []}
         selectedLeadIds={selectedLeadIds}
         onSelectLead={handleSelectLead}
         onSelectAll={handleSelectAll}

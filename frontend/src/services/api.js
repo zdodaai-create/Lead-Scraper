@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -21,17 +21,24 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor for 401 unauth redirect
+// Clean Response Interceptor (No infinite redirect loops)
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('leadfinder_token');
-      localStorage.removeItem('leadfinder_user');
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-        window.location.href = '/login';
-      }
+  (response) => {
+    // If backend returns HTML (e.g. static host fallback), normalize safely
+    if (typeof response.data === 'string' && response.data.trim().startsWith('<!DOCTYPE')) {
+      return {
+        data: {
+          items: [],
+          summary: { total_leads: 0, with_phone: 0, with_email: 0, with_website: 0, without_email: 0 },
+          page: 1,
+          total_pages: 1,
+          total: 0
+        }
+      };
     }
+    return response;
+  },
+  (error) => {
     return Promise.reject(error);
   }
 );
@@ -71,8 +78,12 @@ export const searchService = {
 // Lead Management Services
 export const leadService = {
   getLeads: async (params = {}) => {
-    const res = await api.get('/leads', { params });
-    return res.data;
+    try {
+      const res = await api.get('/leads', { params });
+      return res.data || { items: [], summary: { total_leads: 0, with_phone: 0, with_email: 0, with_website: 0, without_email: 0 }, page: 1, total_pages: 1, total: 0 };
+    } catch (e) {
+      return { items: [], summary: { total_leads: 0, with_phone: 0, with_email: 0, with_website: 0, without_email: 0 }, page: 1, total_pages: 1, total: 0 };
+    }
   },
   getLeadById: async (id) => {
     const res = await api.get(`/leads/${id}`);
