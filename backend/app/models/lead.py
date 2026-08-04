@@ -20,6 +20,7 @@ class Lead(Base):
     city = Column(String(100), index=True, nullable=True)
     state = Column(String(100), nullable=True)
     country = Column(String(100), default="India")
+    country_code = Column(String(10), default="IN", index=True, nullable=True)
     postal_code = Column(String(50), default="Not Available")
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)

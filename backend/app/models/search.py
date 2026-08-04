@@ -11,6 +11,7 @@ class Search(Base):
     user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     name = Column(String(255), nullable=False)
     country = Column(String(100), default="India")
+    country_code = Column(String(10), default="IN", nullable=True)
     state = Column(String(100), nullable=True)
     region = Column(String(100), nullable=False)
     category = Column(String(100), nullable=False)

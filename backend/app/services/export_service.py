@@ -17,6 +17,7 @@ def generate_export_dataframe(leads: List[Lead]) -> pd.DataFrame:
             "City": lead.city or "Not Available",
             "State": lead.state or "Not Available",
             "Country": lead.country or "India",
+            "Country Code": getattr(lead, "country_code", "IN") or "IN",
             "Rating": lead.rating if lead.rating is not None else "N/A",
             "Review Count": lead.review_count,
             "Business Status": lead.business_status or "OPERATIONAL",

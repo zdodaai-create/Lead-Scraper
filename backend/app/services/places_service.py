@@ -429,9 +429,17 @@ async def fetch_grid_point_places(
     return point_results
 
 
-async def search_business_leads(region: str, category: str, radius_km: float, max_results: int) -> List[Dict[str, Any]]:
+async def search_business_leads(
+    region: str,
+    category: str,
+    radius_km: float,
+    max_results: int,
+    country: str = "India",
+    state: Optional[str] = None,
+    country_code: Optional[str] = "IN"
+) -> List[Dict[str, Any]]:
     """
-    Primary business lead discovery engine.
+    Primary business lead discovery engine supporting global multi-country locations.
     Applies geographic grid searching, pagination, Place ID deduplication, Haversine radius filtering,
     and Place Details enrichment for contact fields.
     """
@@ -442,7 +450,7 @@ async def search_business_leads(region: str, category: str, radius_km: float, ma
             detail="GOOGLE_MAPS_API_KEY is not configured in environment variables. Please set GOOGLE_MAPS_API_KEY in Render Dashboard."
         )
 
-    logger.info(f"POST /api/search RECEIVED PARAMS: region='{region}', category='{category}', radius_km={radius_km}, max_results={max_results}")
+    logger.info(f"POST /api/search RECEIVED PARAMS: region='{region}', state='{state}', country='{country}', country_code='{country_code}', category='{category}', radius_km={radius_km}, max_results={max_results}")
 
     query = f"{category}"
     stats = {
@@ -455,12 +463,20 @@ async def search_business_leads(region: str, category: str, radius_km: float, ma
         "final_returned": 0
     }
 
+    # Construct dynamic location geocode query string
+    geocode_parts = [region]
+    if state and state.strip() and state.strip().lower() != region.strip().lower():
+        geocode_parts.append(state.strip())
+    if country and country.strip():
+        geocode_parts.append(country.strip())
+    geocode_query_str = ", ".join(geocode_parts)
+
     async with httpx.AsyncClient(timeout=15.0) as client:
-        # 1. Geocode search region
-        center_lat, center_lng = await geocode_location(client, region)
+        # 1. Geocode search location
+        center_lat, center_lng = await geocode_location(client, geocode_query_str)
         if center_lat is None or center_lng is None:
-            logger.warning(f"Could not geocode '{region}'. Falling back to center text query search.")
-            query = f"{category} in {region}"
+            logger.warning(f"Could not geocode '{geocode_query_str}'. Falling back to center text query search.")
+            query = f"{category} in {geocode_query_str}"
             grid = [(0.0, 0.0, radius_km)]
             use_coords = False
         else:
@@ -513,11 +529,13 @@ async def search_business_leads(region: str, category: str, radius_km: float, ma
         else:
             in_radius_leads = unique_leads
 
-        # Add region context to items
+        # Add region & country context to items
         for item in in_radius_leads:
             item["category"] = category
             item["city"] = region
-            item["country"] = "India"
+            item["state"] = state
+            item["country"] = country or "India"
+            item["country_code"] = country_code or "IN"
 
         # 5. Apply max_results slicing AFTER discovery, grid aggregation, Place ID deduplication, and radius filtering
         final_leads = in_radius_leads[:max_results]

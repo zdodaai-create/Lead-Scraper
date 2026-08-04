@@ -13,6 +13,7 @@ class LeadBase(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     country: str = "India"
+    country_code: Optional[str] = "IN"
     postal_code: str = "Not Available"
     latitude: Optional[float] = None
     longitude: Optional[float] = None

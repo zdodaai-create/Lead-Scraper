@@ -464,33 +464,34 @@ export const LOCATION_DATA = {
     ]
   },
   'United States': {
-    California: ['Los Angeles', 'San Francisco', 'San Jose', 'San Diego', 'Sacramento', 'Fresno', 'Oakland', 'Long Beach', 'Bakersfield', 'Anaheim'],
+    California: ['Los Angeles', 'San Francisco', 'San Jose', 'San Diego', 'Sacramento', 'Fresno', 'Oakland', 'Long Beach', 'Anaheim'],
     'New York': ['New York City', 'Buffalo', 'Rochester', 'Yonkers', 'Syracuse', 'Albany'],
-    Texas: ['Houston', 'San Antonio', 'Dallas', 'Austin', 'Fort Worth', 'El Paso', 'Arlington', 'Corpus Christi'],
-    Florida: ['Jacksonville', 'Miami', 'Tampa', 'Orlando', 'St. Petersburg', 'Fort Lauderdale'],
+    Texas: ['Houston', 'San Antonio', 'Dallas', 'Austin', 'Fort Worth', 'El Paso', 'Arlington'],
+    Florida: ['Miami', 'Jacksonville', 'Tampa', 'Orlando', 'Fort Lauderdale', 'St. Petersburg'],
     Illinois: ['Chicago', 'Aurora', 'Joliet', 'Naperville', 'Rockford', 'Springfield']
   },
+  Australia: {
+    'New South Wales': ['Sydney', 'Newcastle', 'Wollongong', 'Central Coast'],
+    Victoria: ['Melbourne', 'Geelong', 'Ballarat', 'Bendigo'],
+    Queensland: ['Brisbane', 'Gold Coast', 'Sunshine Coast', 'Townsville', 'Cairns'],
+    'Western Australia': ['Perth', 'Fremantle', 'Mandurah'],
+    'South Australia': ['Adelaide', 'Mount Gambier']
+  },
+  Singapore: {
+    Singapore: ['Singapore', 'Central Region', 'East Region', 'North Region', 'North-East Region', 'West Region']
+  },
+  Japan: {
+    Tokyo: ['Tokyo', 'Shinjuku', 'Shibuya', 'Chiyoda', 'Minato', 'Chuo'],
+    Osaka: ['Osaka', 'Umeda', 'Namba'],
+    Kanagawa: ['Yokohama', 'Kawasaki'],
+    Aichi: ['Nagoya'],
+    Fukuoka: ['Fukuoka'],
+    Hokkaido: ['Sapporo']
+  },
   'United Kingdom': {
-    England: ['London', 'Birmingham', 'Liverpool', 'Bristol', 'Manchester', 'Leeds', 'Sheffield', 'Leicester', 'Coventry', 'Bradford', 'Nottingham'],
+    England: ['London', 'Birmingham', 'Liverpool', 'Bristol', 'Manchester', 'Leeds', 'Sheffield'],
     Scotland: ['Glasgow', 'Edinburgh', 'Aberdeen', 'Dundee'],
     Wales: ['Cardiff', 'Swansea', 'Newport'],
     'Northern Ireland': ['Belfast', 'Derry']
-  },
-  'United Arab Emirates': {
-    Dubai: ['Dubai City', 'Business Bay', 'Deira', 'Jumeirah', 'Dubai Marina', 'Downtown Dubai', 'JLT', 'Al Barsha'],
-    'Abu Dhabi': ['Abu Dhabi City', 'Al Ain', 'Yas Island', 'Al Reem Island', 'Musaffah'],
-    Sharjah: ['Sharjah City', 'Al Majaz', 'Al Nahda', 'Al Qasimia'],
-    Ajman: ['Ajman City', 'Al Nuaimia'],
-    Ras_Al_Khaimah: ['Ras Al Khaimah City', 'Al Hamra']
-  },
-  Canada: {
-    Ontario: ['Toronto', 'Ottawa', 'Mississauga', 'Brampton', 'Hamilton', 'London', 'Markham', 'Vaughan', 'Kitchener'],
-    'British Columbia': ['Vancouver', 'Surrey', 'Burnaby', 'Richmond', 'Abbotsford', 'Coquitlam', 'Kelowna', 'Victoria'],
-    Quebec: ['Montreal', 'Quebec City', 'Laval', 'Gatineau', 'Longueuil', 'Sherbrooke']
-  },
-  Australia: {
-    'New South Wales': ['Sydney', 'Newcastle', 'Wollongong', 'Central Coast', 'Maitland'],
-    Victoria: ['Melbourne', 'Geelong', 'Ballarat', 'Bendigo'],
-    Queensland: ['Brisbane', 'Gold Coast', 'Sunshine Coast', 'Townsville', 'Cairns']
   }
 };

@@ -1,13 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { LOCATION_DATA } from '../utils/locationData';
 import { BUSINESS_CATEGORIES, POPULAR_CATEGORIES } from '../utils/categoryData';
-import { Search, SlidersHorizontal, MapPin, Building2, Radius as RadiusIcon, Hash, Globe, Compass, Sparkles } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, Building2, Radius as RadiusIcon, Hash, Globe, Compass } from 'lucide-react';
+
+const ADMIN_LEVEL_1_LABELS = {
+  India: 'State / Union Territory',
+  'United States': 'State',
+  Australia: 'State / Territory',
+  Singapore: 'State / Division',
+  Japan: 'Prefecture',
+  'United Kingdom': 'Country / Region',
+};
+
+const ADMIN_LEVEL_2_LABELS = {
+  India: 'District / City',
+  'United States': 'City',
+  Australia: 'City',
+  Singapore: 'Region / Area',
+  Japan: 'City / Ward',
+  'United Kingdom': 'City',
+};
+
+const COUNTRY_CODES = {
+  India: 'IN',
+  'United States': 'US',
+  Australia: 'AU',
+  Singapore: 'SG',
+  Japan: 'JP',
+  'United Kingdom': 'GB',
+};
 
 const SearchForm = ({ onSubmit, loading }) => {
   const [selectedCountry, setSelectedCountry] = useState('India');
   const [selectedState, setSelectedState] = useState('Tamil Nadu');
-  const [selectedDistrict, setSelectedDistrict] = useState('Chennai');
-  const [customDistrict, setCustomDistrict] = useState('');
+  const [selectedCity, setSelectedCity] = useState('Chennai');
+  const [customCity, setCustomCity] = useState('');
 
   const [category, setCategory] = useState('Software Companies');
   const [customCategory, setCustomCategory] = useState('');
@@ -20,45 +47,51 @@ const SearchForm = ({ onSubmit, loading }) => {
   const [hasWebsite, setHasWebsite] = useState(false);
   const [hasEmail, setHasEmail] = useState(false);
 
-  // Cascading update when Country changes
+  const activeCountryCode = COUNTRY_CODES[selectedCountry] || 'IN';
+  const admin1Label = ADMIN_LEVEL_1_LABELS[selectedCountry] || 'State / Region';
+  const admin2Label = ADMIN_LEVEL_2_LABELS[selectedCountry] || 'District / City';
+  const isSingapore = selectedCountry === 'Singapore';
+
+  // Available States / Regions for selected country
   const availableStates = Object.keys(LOCATION_DATA[selectedCountry] || {});
 
+  // Cascading update when Country changes
   useEffect(() => {
     if (availableStates.length > 0) {
-      const firstState = availableStates.includes('Tamil Nadu') ? 'Tamil Nadu' : availableStates[0];
-      setSelectedState(firstState);
-      const districts = LOCATION_DATA[selectedCountry]?.[firstState] || [];
-      if (districts.length > 0) {
-        setSelectedDistrict(districts.includes('Chennai') ? 'Chennai' : districts[0]);
+      const defaultState = availableStates.includes('Tamil Nadu') ? 'Tamil Nadu' : availableStates[0];
+      setSelectedState(defaultState);
+      const cities = LOCATION_DATA[selectedCountry]?.[defaultState] || [];
+      if (cities.length > 0) {
+        setSelectedCity(cities.includes('Chennai') ? 'Chennai' : cities[0]);
       } else {
-        setSelectedDistrict('Custom');
+        setSelectedCity('Custom');
       }
+    } else {
+      setSelectedState('');
+      setSelectedCity(selectedCountry);
     }
   }, [selectedCountry]);
 
   // Cascading update when State changes
-  const availableDistricts = LOCATION_DATA[selectedCountry]?.[selectedState] || [];
-
+  const availableCities = LOCATION_DATA[selectedCountry]?.[selectedState] || [];
   useEffect(() => {
-    if (availableDistricts.length > 0) {
-      setSelectedDistrict(availableDistricts[0]);
+    if (availableCities.length > 0) {
+      setSelectedCity(availableCities[0]);
     } else {
-      setSelectedDistrict('Custom');
+      setSelectedCity('Custom');
     }
   }, [selectedState]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Determine final region
-    let finalRegion = selectedDistrict;
-    if (selectedDistrict === 'Custom' || !selectedDistrict) {
-      finalRegion = customDistrict || selectedState;
+    let finalRegion = selectedCity;
+    if (selectedCity === 'Custom' || !selectedCity) {
+      finalRegion = customCity || selectedState || selectedCountry;
     } else {
-      finalRegion = selectedDistrict.split('(')[0].trim();
+      finalRegion = selectedCity.split('(')[0].trim();
     }
 
-    // Determine final business category
     let finalCategory = category;
     if (category === 'Custom') {
       finalCategory = customCategory.trim() || 'Businesses';
@@ -66,7 +99,8 @@ const SearchForm = ({ onSubmit, loading }) => {
 
     const payload = {
       country: selectedCountry,
-      state: selectedState,
+      country_code: activeCountryCode,
+      state: isSingapore ? null : selectedState,
       region: finalRegion,
       category: finalCategory,
       radius_km: parseFloat(radiusKm) || 20,
@@ -94,13 +128,13 @@ const SearchForm = ({ onSubmit, loading }) => {
           </div>
         </div>
         <span class="hidden sm:inline-block text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full font-semibold">
-          Smart Category & Location Filters
+          🌍 Active Country: {selectedCountry} ({activeCountryCode})
         </span>
       </div>
 
-      {/* 3-Tier Dependent Location Dropdowns Row */}
+      {/* 3-Tier Location Dropdowns Row */}
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
-        {/* 1. Country */}
+        {/* 1. Country Selection */}
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
             <Globe class="w-3.5 h-3.5 text-blue-400" />
@@ -119,50 +153,62 @@ const SearchForm = ({ onSubmit, loading }) => {
           </select>
         </div>
 
-        {/* 2. State */}
-        <div>
-          <label class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
-            <MapPin class="w-3.5 h-3.5 text-amber-400" />
-            2. State / Province *
-          </label>
-          <select
-            value={selectedState}
-            onChange={(e) => setSelectedState(e.target.value)}
-            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
-          >
-            {availableStates.map((st) => (
-              <option key={st} value={st}>
-                {st}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* 2. State / Province / Prefecture / Region */}
+        {!isSingapore ? (
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <MapPin class="w-3.5 h-3.5 text-amber-400" />
+              2. {admin1Label} *
+            </label>
+            <select
+              value={selectedState}
+              onChange={(e) => setSelectedState(e.target.value)}
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+            >
+              {availableStates.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <MapPin class="w-3.5 h-3.5 text-slate-500" />
+              2. State / Division
+            </label>
+            <div class="w-full bg-slate-900/50 border border-slate-800 rounded-lg px-3 py-2 text-xs font-semibold text-slate-400">
+              Not Required (Singapore City-State)
+            </div>
+          </div>
+        )}
 
-        {/* 3. District / City */}
+        {/* 3. District / City / Ward / Region Area */}
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
             <Compass class="w-3.5 h-3.5 text-emerald-400" />
-            3. District / City *
+            3. {admin2Label} *
           </label>
           <select
-            value={selectedDistrict}
-            onChange={(e) => setSelectedDistrict(e.target.value)}
+            value={selectedCity}
+            onChange={(e) => setSelectedCity(e.target.value)}
             class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
           >
-            {availableDistricts.map((dist) => (
-              <option key={dist} value={dist}>
-                {dist}
+            {availableCities.map((cityItem) => (
+              <option key={cityItem} value={cityItem}>
+                {cityItem}
               </option>
             ))}
-            <option value="Custom">Custom City / District...</option>
+            <option value="Custom">Custom City / Area Name...</option>
           </select>
 
-          {selectedDistrict === 'Custom' && (
+          {selectedCity === 'Custom' && (
             <input
               type="text"
-              value={customDistrict}
-              onChange={(e) => setCustomDistrict(e.target.value)}
-              placeholder="Enter Custom District Name"
+              value={customCity}
+              onChange={(e) => setCustomCity(e.target.value)}
+              placeholder={`Enter Custom ${admin2Label} Name`}
               required
               class="w-full mt-2 bg-slate-900 border border-blue-500/50 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-400 placeholder-slate-500"
             />
@@ -180,7 +226,6 @@ const SearchForm = ({ onSubmit, loading }) => {
           <span class="text-[11px] text-slate-400">Select industry preset or enter custom</span>
         </div>
 
-        {/* Quick Industry Presets Select */}
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div class="md:col-span-3">
             <select
@@ -197,7 +242,7 @@ const SearchForm = ({ onSubmit, loading }) => {
                   ))}
                 </optgroup>
               ))}
-              <option value="Custom">✍️ Write Custom Category / Search Query...</option>
+              <option value="Custom">✍️ Write Custom Category / Query...</option>
             </select>
 
             {category === 'Custom' && (
@@ -205,14 +250,13 @@ const SearchForm = ({ onSubmit, loading }) => {
                 type="text"
                 value={customCategory}
                 onChange={(e) => setCustomCategory(e.target.value)}
-                placeholder="e.g. Solar Energy Installers, Organic Spices Exporters..."
+                placeholder="e.g. Solar Installers, AI Startups, Real Estate Brokers..."
                 required
                 class="w-full mt-2 bg-slate-950 border border-purple-500/50 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-purple-400 placeholder-slate-500"
               />
             )}
           </div>
 
-          {/* Quick Preset Chips */}
           <div class="md:col-span-1 flex flex-wrap gap-1.5 items-center">
             {POPULAR_CATEGORIES.slice(0, 4).map((popCat) => (
               <button
@@ -250,7 +294,7 @@ const SearchForm = ({ onSubmit, loading }) => {
             <option value="20">20 KM (Metropolitan)</option>
             <option value="50">50 KM (Regional Hub)</option>
             <option value="100">100 KM (Statewide)</option>
-            <option value="200">200 KM (Multi-District / Expanded)</option>
+            <option value="200">200 KM (Expanded / Multi-City)</option>
           </select>
         </div>
 
@@ -334,12 +378,12 @@ const SearchForm = ({ onSubmit, loading }) => {
           {loading ? (
             <>
               <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              <span>Searching & Extracting...</span>
+              <span>Searching {selectedCountry}...</span>
             </>
           ) : (
             <>
               <Search class="w-4 h-4" />
-              <span>FIND LEADS</span>
+              <span>FIND LEADS ({activeCountryCode})</span>
             </>
           )}
         </button>

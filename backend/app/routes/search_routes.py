@@ -40,6 +40,7 @@ async def execute_lead_search(
             user_id=current_user.id,
             name=search_name,
             country=search_in.country,
+            country_code=getattr(search_in, 'country_code', 'IN'),
             state=search_in.state,
             region=search_in.region,
             category=search_in.category,
@@ -64,7 +65,10 @@ async def execute_lead_search(
         region=search_in.region,
         category=search_in.category,
         radius_km=search_in.radius_km,
-        max_results=search_in.max_results
+        max_results=search_in.max_results,
+        country=search_in.country,
+        state=search_in.state,
+        country_code=getattr(search_in, 'country_code', 'IN')
     )
 
     # 3. Deduplicate strictly by Google Place ID
@@ -139,6 +143,7 @@ async def execute_lead_search(
             city=item.get("city", search_in.region),
             state=search_in.state,
             country=search_in.country,
+            country_code=item.get("country_code", getattr(search_in, "country_code", "IN")),
             postal_code=item.get("postal_code", "Not Available"),
             latitude=item.get("latitude"),
             longitude=item.get("longitude"),

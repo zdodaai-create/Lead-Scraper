@@ -6,8 +6,9 @@ from datetime import datetime
 class SearchCreate(BaseModel):
     name: Optional[str] = None
     country: str = "India"
-    state: Optional[str] = "Kerala"
-    region: str = "Trivandrum"
+    country_code: Optional[str] = "IN"
+    state: Optional[str] = None
+    region: str = "Chennai"
     category: str = "Software Companies"
     radius_km: float = Field(default=20.0, ge=0.5, le=300.0)
     max_results: int = Field(default=100, ge=1, le=1000)
@@ -22,6 +23,7 @@ class SearchOut(BaseModel):
     user_id: int
     name: str
     country: str
+    country_code: Optional[str] = "IN"
     state: Optional[str]
     region: str
     category: str
