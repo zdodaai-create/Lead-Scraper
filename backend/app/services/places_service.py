@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Tuple, Optional
 from fastapi import HTTPException
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,11 @@ PLACES_NEW_FIELD_MASK = (
 
 
 def get_api_key() -> str:
-    """Loads GOOGLE_PLACES_API_KEY or GOOGLE_MAPS_API_KEY from backend/.env."""
-    load_dotenv(override=True)
-    key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY") or ""
+    """Loads GOOGLE_PLACES_API_KEY or GOOGLE_MAPS_API_KEY, prioritizing process env vars."""
+    key = os.environ.get("GOOGLE_PLACES_API_KEY") or os.environ.get("GOOGLE_MAPS_API_KEY")
+    if not key:
+        load_dotenv()
+        key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY") or ""
     return key.strip()
 
 
@@ -40,7 +42,10 @@ def mask_key(key: str) -> str:
 
 
 def is_demo_mode_active() -> bool:
-    load_dotenv(override=True)
+    """Checks if DEMO_MODE is enabled, prioritizing process env vars."""
+    if "DEMO_MODE" in os.environ:
+        return os.environ["DEMO_MODE"].lower() == "true"
+    load_dotenv()
     return os.getenv("DEMO_MODE", "false").lower() == "true"
 
 
