@@ -99,3 +99,33 @@ def deduplicate_leads(raw_leads: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         unique_leads.append(lead)
 
     return unique_leads
+
+
+def deduplicate_by_place_id(raw_leads: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    STRICTLY deduplicates leads by Google Place ID (provider_place_id).
+    One unique Google Place ID = one business.
+    Do NOT filter by domain, phone, email or name.
+    """
+    seen_place_ids = set()
+    unique_leads = []
+
+    for lead in raw_leads:
+        place_id = lead.get("provider_place_id")
+        if not place_id:
+            # Fallback if no place_id: use company name + location
+            fallback_key = f"{lead.get('company_name', '')}_{lead.get('address', '')}"
+            if fallback_key in seen_place_ids:
+                continue
+            seen_place_ids.add(fallback_key)
+            unique_leads.append(lead)
+            continue
+
+        if place_id in seen_place_ids:
+            continue
+
+        seen_place_ids.add(place_id)
+        unique_leads.append(lead)
+
+    return unique_leads
+

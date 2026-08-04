@@ -14,7 +14,7 @@ from app.schemas.lead import LeadOut
 from app.services.auth_service import get_current_user
 from app.services.places_service import search_business_leads
 from app.services.website_service import enrich_lead_from_website
-from app.services.deduplicator import deduplicate_leads
+from app.services.deduplicator import deduplicate_leads, deduplicate_by_place_id
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +67,12 @@ async def execute_lead_search(
         max_results=search_in.max_results
     )
 
-    # 3. Async Website Contact Enrichment
+    # 3. Deduplicate strictly by Google Place ID
+    unique_places = deduplicate_by_place_id(raw_leads)
+
+    # 4. Async Website Contact Enrichment on unique surviving leads
     enrich_tasks = []
-    for item in raw_leads:
+    for item in unique_places:
         website = item.get("website")
         if website and website != "Not Available":
             enrich_tasks.append(enrich_lead_from_website(website))
@@ -85,7 +88,7 @@ async def execute_lead_search(
     enrich_results = await asyncio.gather(*enrich_tasks, return_exceptions=True)
 
     enriched_leads = []
-    for i, item in enumerate(raw_leads):
+    for i, item in enumerate(unique_places):
         res = enrich_results[i]
         if isinstance(res, dict):
             if item.get("phone") == "Not Available" and res.get("phone") != "Not Available":
@@ -101,12 +104,9 @@ async def execute_lead_search(
 
         enriched_leads.append(item)
 
-    # 4. Multi-Criteria Deduplication
-    unique_leads = deduplicate_leads(enriched_leads)
-
     # 5. Apply User Filter Parameters
     final_leads = []
-    for item in unique_leads:
+    for item in enriched_leads:
         rating = item.get("rating")
         phone = item.get("phone", "Not Available")
         website = item.get("website", "Not Available")

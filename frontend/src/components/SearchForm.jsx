@@ -243,13 +243,14 @@ const SearchForm = ({ onSubmit, loading }) => {
           <select
             value={radiusKm}
             onChange={(e) => setRadiusKm(e.target.value)}
-            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
+            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
           >
             <option value="5">5 KM (Local Area)</option>
             <option value="10">10 KM (City Center)</option>
             <option value="20">20 KM (Metropolitan)</option>
             <option value="50">50 KM (Regional Hub)</option>
             <option value="100">100 KM (Statewide)</option>
+            <option value="200">200 KM (Multi-District / Expanded)</option>
           </select>
         </div>
 
@@ -262,12 +263,14 @@ const SearchForm = ({ onSubmit, loading }) => {
           <select
             value={maxResults}
             onChange={(e) => setMaxResults(e.target.value)}
-            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
+            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
           >
             <option value="20">20 Business Leads</option>
             <option value="50">50 Business Leads</option>
             <option value="100">100 Business Leads</option>
             <option value="200">200 Business Leads</option>
+            <option value="500">500 Business Leads</option>
+            <option value="1000">⚡ Maximum Available (Up to 1000)</option>
           </select>
         </div>
       </div>

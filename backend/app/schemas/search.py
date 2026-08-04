@@ -9,8 +9,8 @@ class SearchCreate(BaseModel):
     state: Optional[str] = "Kerala"
     region: str = "Trivandrum"
     category: str = "Software Companies"
-    radius_km: float = Field(default=20.0, ge=0.5, le=100.0)
-    max_results: int = Field(default=100, ge=1, le=500)
+    radius_km: float = Field(default=20.0, ge=0.5, le=300.0)
+    max_results: int = Field(default=100, ge=1, le=1000)
     min_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
     has_phone: bool = False
     has_website: bool = False
