@@ -65,12 +65,15 @@ async def run_live_contact_pipeline_test():
         print("==================================================================================")
 
         for idx, lead in enumerate(leads[:5], 1):
+            email_found = "YES" if (lead.email and lead.email != "Not Available") else "NO"
+            source_url = lead.email_source_url if (lead.email and lead.email != "Not Available") else "N/A (No email on page)"
             print(f"\nSample #{idx}: {lead.company_name}")
-            print(f"  - Google Place ID: {lead.provider_place_id}")
-            print(f"  - Address:         {lead.address}")
-            print(f"  - Phone:           {lead.phone}")
-            print(f"  - Website:         {lead.website}")
-            print(f"  - Email:           {lead.email}")
+            print(f"  - Google Place ID:               {lead.provider_place_id}")
+            print(f"  - Phone:                          {lead.phone}")
+            print(f"  - Website:                        {lead.website}")
+            print(f"  - Email:                          {lead.email}")
+            print(f"  - Email Source URL:               {source_url}")
+            print(f"  - Email text actually found on page: {email_found}")
 
     finally:
         db.close()

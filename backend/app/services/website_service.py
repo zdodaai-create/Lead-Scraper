@@ -85,7 +85,9 @@ async def enrich_lead_from_website(website_url: str) -> Dict[str, Optional[str]]
                         page_phones = extract_phones(html_text)
 
                         for e in page_emails:
-                            found_emails_with_source.append((e, final_url))
+                            # Strict verification: email must physically exist in page HTML text or mailto links
+                            if e.lower() in html_text.lower() or any(e.lower() in m.lower() for m in mailto_links):
+                                found_emails_with_source.append((e, final_url))
 
                         if page_phones:
                             found_phones.extend(page_phones)
