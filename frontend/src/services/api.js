@@ -11,9 +11,9 @@ const resolveApiBaseUrl = () => {
     return envUrl;
   }
 
-  // In production (Netlify), if VITE_API_BASE_URL is missing, log a critical configuration warning
-  if (import.meta.env.PROD && typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
-    console.error("CRITICAL PRODUCTION CONFIGURATION ERROR: VITE_API_BASE_URL environment variable is missing on Netlify deployment. Set VITE_API_BASE_URL=https://<render-backend>.onrender.com/api in Netlify Site Settings.");
+  // Default target for Netlify production deployment
+  if (typeof window !== 'undefined' && window.location.hostname.includes('netlify.app')) {
+    return 'https://lead-finder-single-app.onrender.com/api';
   }
 
   return '/api';

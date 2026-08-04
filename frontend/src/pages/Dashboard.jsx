@@ -103,14 +103,20 @@ const Dashboard = ({ searchQuery }) => {
         }
       }
     } catch (err) {
-      console.error(err);
-      let errMsg = 'Failed to search leads via Google Places API.';
+      console.error('[Lead Finder Network/API Diagnostics]:', {
+        message: err.message,
+        code: err.code,
+        status: err.response?.status,
+        data: err.response?.data,
+        requestURL: err.config?.url || err.request?.responseURL
+      });
+
+      let errMsg = 'Unable to connect to the Lead Finder backend.';
       if (err.response?.data?.detail) {
-        if (typeof err.response.data.detail === 'string') {
-          errMsg = err.response.data.detail;
-        } else {
-          errMsg = JSON.stringify(err.response.data.detail);
-        }
+        const detail = err.response.data.detail;
+        errMsg = typeof detail === 'string' ? detail : JSON.stringify(detail);
+      } else if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        errMsg = 'Unable to connect to the Lead Finder backend.';
       } else if (err.message) {
         errMsg = err.message;
       }
@@ -257,12 +263,20 @@ const Dashboard = ({ searchQuery }) => {
         <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3 text-xs text-amber-300 shadow-md">
           <AlertTriangle class="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
           <div class="flex-1">
-            <h4 class="font-bold text-amber-200 text-sm">Google Places API Status Message</h4>
+            <h4 class="font-bold text-amber-200 text-sm">
+              {searchError.includes('GOOGLE_MAPS_API_KEY') || searchError.includes('Google Places') || searchError.includes('API key')
+                ? 'Google Places API Status Message'
+                : 'Backend Connection Status'}
+            </h4>
             <p class="mt-1 text-slate-200 font-mono text-[11px] bg-slate-950/60 p-2.5 rounded border border-slate-800 break-all">
               {searchError}
             </p>
             <div class="mt-2 text-[11px] text-slate-400">
-              💡 <strong>Note:</strong> Ensure <code>GOOGLE_MAPS_API_KEY</code> is properly configured in your Render environment variables.
+              {searchError.includes('GOOGLE_MAPS_API_KEY') || searchError.includes('Google Places') || searchError.includes('API key') ? (
+                <span>💡 <strong>Note:</strong> Ensure <code>GOOGLE_MAPS_API_KEY</code> is properly configured in your Render environment variables.</span>
+              ) : (
+                <span>💡 <strong>Note:</strong> Verify backend deployment status on Render at <code>https://lead-finder-single-app.onrender.com/health</code>.</span>
+              )}
             </div>
           </div>
         </div>
