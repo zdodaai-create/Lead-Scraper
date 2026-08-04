@@ -201,6 +201,70 @@ def generate_search_grid(center_lat: float, center_lng: float, radius_km: float)
     return grid[:MAX_GRID_POINTS]
 
 
+async def fetch_place_details(client: httpx.AsyncClient, place_id: str) -> Dict[str, Any]:
+    """
+    Enriches a single Place ID with official Phone, Website, Address, and Google Maps URL.
+    Tries Places API (New) GET https://places.googleapis.com/v1/places/{place_id}
+    with fallback to Legacy Place Details.
+    """
+    api_key = get_api_key()
+    if not api_key or not place_id:
+        return {}
+
+    # 1. Primary: Places API (New v1) Details
+    url_new = f"https://places.googleapis.com/v1/places/{place_id}"
+    headers_new = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": api_key,
+        "X-Goog-FieldMask": "id,displayName,formattedAddress,nationalPhoneNumber,internationalPhoneNumber,websiteUri,googleMapsUri"
+    }
+
+    try:
+        res = await client.get(url_new, headers=headers_new, timeout=8.0)
+        if res.status_code == 200:
+            p = res.json()
+            phone = p.get("internationalPhoneNumber") or p.get("nationalPhoneNumber") or "Not Available"
+            website = p.get("websiteUri") or "Not Available"
+            address = p.get("formattedAddress") or "Not Available"
+            maps_url = p.get("googleMapsUri") or f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+            return {
+                "phone": phone,
+                "website": website,
+                "address": address,
+                "google_maps_url": maps_url
+            }
+    except Exception as e:
+        logger.warning(f"Places API (New) Details failed for {place_id}: {e}")
+
+    # 2. Fallback: Places API (Legacy) Details
+    url_leg = "https://maps.googleapis.com/maps/api/place/details/json"
+    params_leg = {
+        "place_id": place_id,
+        "fields": "formatted_phone_number,international_phone_number,website,url,formatted_address",
+        "key": api_key
+    }
+    try:
+        res = await client.get(url_leg, params=params_leg, timeout=8.0)
+        if res.status_code == 200:
+            data = res.json()
+            if data.get("status") == "OK" and data.get("result"):
+                p = data["result"]
+                phone = p.get("international_phone_number") or p.get("formatted_phone_number") or "Not Available"
+                website = p.get("website") or "Not Available"
+                address = p.get("formatted_address") or "Not Available"
+                maps_url = p.get("url") or f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+                return {
+                    "phone": phone,
+                    "website": website,
+                    "address": address,
+                    "google_maps_url": maps_url
+                }
+    except Exception as e:
+        logger.warning(f"Legacy Place Details failed for {place_id}: {e}")
+
+    return {}
+
+
 async def fetch_grid_point_places(
     client: httpx.AsyncClient,
     semaphore: asyncio.Semaphore,
@@ -261,7 +325,7 @@ async def fetch_grid_point_places(
                         if not place_id:
                             continue
                         display_name = p.get("displayName", {}).get("text") or "Not Available"
-                        phone = p.get("nationalPhoneNumber") or p.get("internationalPhoneNumber") or "Not Available"
+                        phone = p.get("internationalPhoneNumber") or p.get("nationalPhoneNumber") or "Not Available"
                         website = p.get("websiteUri") or "Not Available"
                         address = p.get("formattedAddress") or "Not Available"
                         rating = p.get("rating")
@@ -368,7 +432,8 @@ async def fetch_grid_point_places(
 async def search_business_leads(region: str, category: str, radius_km: float, max_results: int) -> List[Dict[str, Any]]:
     """
     Primary business lead discovery engine.
-    Applies geographic grid searching, pagination, Place ID deduplication, and Haversine radius filtering.
+    Applies geographic grid searching, pagination, Place ID deduplication, Haversine radius filtering,
+    and Place Details enrichment for contact fields.
     """
     api_key = get_api_key()
     if not api_key:
@@ -454,9 +519,35 @@ async def search_business_leads(region: str, category: str, radius_km: float, ma
             item["city"] = region
             item["country"] = "India"
 
-        # 5. Apply max_results slicing ONLY AFTER discovery, grid aggregation, Place ID deduplication, and radius filtering
+        # 5. Apply max_results slicing AFTER discovery, grid aggregation, Place ID deduplication, and radius filtering
         final_leads = in_radius_leads[:max_results]
         stats["final_returned"] = len(final_leads)
+
+        # 6. Perform Place Details Enrichment ONLY on final surviving leads missing phone/website
+        detail_enrichment_tasks = []
+        leads_needing_enrichment = []
+
+        for lead in final_leads:
+            need_phone = not lead.get("phone") or lead.get("phone") == "Not Available"
+            need_website = not lead.get("website") or lead.get("website") == "Not Available"
+            if (need_phone or need_website) and lead.get("provider_place_id"):
+                detail_enrichment_tasks.append(fetch_place_details(client, lead["provider_place_id"]))
+                leads_needing_enrichment.append(lead)
+
+        if detail_enrichment_tasks:
+            logger.info(f"Executing Place Details enrichment for {len(detail_enrichment_tasks)} leads missing contact info...")
+            details_results = await asyncio.gather(*detail_enrichment_tasks, return_exceptions=True)
+            for idx, res in enumerate(details_results):
+                if isinstance(res, dict) and res:
+                    target = leads_needing_enrichment[idx]
+                    if res.get("phone") and res["phone"] != "Not Available":
+                        target["phone"] = res["phone"]
+                    if res.get("website") and res["website"] != "Not Available":
+                        target["website"] = res["website"]
+                    if res.get("address") and res["address"] != "Not Available":
+                        target["address"] = res["address"]
+                    if res.get("google_maps_url"):
+                        target["google_maps_url"] = res["google_maps_url"]
 
         # Structured Metrics Logging
         logger.info("==================================================")
