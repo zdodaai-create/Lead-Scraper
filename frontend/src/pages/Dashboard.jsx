@@ -262,7 +262,7 @@ const Dashboard = ({ searchQuery }) => {
               {searchError}
             </p>
             <div class="mt-2 text-[11px] text-slate-400">
-              💡 <strong>Quick Fix:</strong> If testing UI without live API credits, set <code>DEMO_MODE=true</code> in <code>backend/.env</code>.
+              💡 <strong>Note:</strong> Ensure <code>GOOGLE_MAPS_API_KEY</code> is properly configured in your Render environment variables.
             </div>
           </div>
         </div>

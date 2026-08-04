@@ -12,7 +12,7 @@ from app.models.lead import Lead
 from app.schemas.search import SearchCreate, SearchOut
 from app.schemas.lead import LeadOut
 from app.services.auth_service import get_current_user
-from app.services.places_service import search_business_leads, is_demo_mode_active
+from app.services.places_service import search_business_leads
 from app.services.website_service import enrich_lead_from_website
 from app.services.deduplicator import deduplicate_leads
 
