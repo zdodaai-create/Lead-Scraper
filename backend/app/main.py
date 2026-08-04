@@ -1,6 +1,9 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import os
 import logging
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.database.session import engine, Base
 from app.database.init_db import init_db
@@ -18,10 +21,9 @@ logger = logging.getLogger("lead_finder")
 # Initialize database tables and seed default demo user
 init_db()
 
-
 app = FastAPI(
-    title="LEAD FINDER API",
-    description="Production-ready REST API for business lead discovery & public website contact enrichment",
+    title="LEAD FINDER",
+    description="Production-ready full-stack application for business lead discovery & public website contact enrichment",
     version="1.0.0"
 )
 
@@ -34,23 +36,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register Routes
+# Register API Routes
 app.include_router(auth_router)
 app.include_router(search_router)
 app.include_router(lead_router)
 app.include_router(export_router)
 
 
-@app.get("/")
-def root():
-    return {
-        "app": "LEAD FINDER",
-        "status": "online",
-        "version": "1.0.0",
-        "documentation": "/docs"
-    }
-
-
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 def health_check():
     return {"status": "healthy"}
+
+
+# Single-App Mode: Serve compiled React Frontend static files directly from FastAPI
+FRONTEND_DIST = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+
+if os.path.exists(FRONTEND_DIST):
+    logger.info(f"Single-App Mode Active: Serving React frontend from {FRONTEND_DIST}")
+    assets_dir = os.path.join(FRONTEND_DIST, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
+    async def serve_spa_frontend(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="API endpoint not found")
+        file_path = os.path.join(FRONTEND_DIST, full_path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(FRONTEND_DIST, "index.html"))
