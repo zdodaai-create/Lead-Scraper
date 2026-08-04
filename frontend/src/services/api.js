@@ -1,6 +1,26 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api';
+// Safely normalize VITE_API_BASE_URL / VITE_API_URL
+const resolveApiBaseUrl = () => {
+  let envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '';
+  if (envUrl) {
+    envUrl = envUrl.replace(/\/+$/, '');
+    if (!envUrl.endsWith('/api')) {
+      envUrl = `${envUrl}/api`;
+    }
+    return envUrl;
+  }
+
+  // In production (Netlify), if VITE_API_BASE_URL is missing, log a critical configuration warning
+  if (import.meta.env.PROD && typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+    console.error("CRITICAL PRODUCTION CONFIGURATION ERROR: VITE_API_BASE_URL environment variable is missing on Netlify deployment. Set VITE_API_BASE_URL=https://<render-backend>.onrender.com/api in Netlify Site Settings.");
+  }
+
+  return '/api';
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
+console.log(`[Lead Finder API] Initialized with Base URL: ${API_BASE_URL}`);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -42,6 +62,7 @@ export const authService = {
 
 export const searchService = {
   findLeads: async (searchParams) => {
+    console.log(`[Lead Finder API] Executing POST to ${API_BASE_URL}/search for region: ${searchParams.region}`);
     const res = await api.post('/search', searchParams);
     return res.data;
   },

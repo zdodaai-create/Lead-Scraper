@@ -43,6 +43,11 @@ app.include_router(lead_router)
 app.include_router(export_router)
 
 
+@app.api_route("/health", methods=["GET", "HEAD"])
+def root_health_check():
+    return {"status": "ok"}
+
+
 @app.api_route("/api/health", methods=["GET", "HEAD"])
 def health_check():
     return {"status": "healthy"}

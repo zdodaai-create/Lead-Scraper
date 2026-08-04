@@ -31,6 +31,7 @@ async def execute_lead_search(
     Executes live business lead discovery & website contact enrichment pipeline.
     Preserves exact HTTP status codes (400, 403, 429, 502) from Google Places API.
     """
+    logger.info(f"Backend received search request: region='{search_in.region}', category='{search_in.category}'")
     search_name = search_in.name or f"{search_in.region} - {search_in.category}"
 
     # 1. Store Search Record
