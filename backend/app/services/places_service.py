@@ -52,7 +52,13 @@ def log_places_configuration_status():
     key = get_api_key()
     configured = bool(key)
     logger.info("=== LEAD FINDER API CONFIGURATION STATUS ===")
-    logger.info(f"Google Places key configured: {'YES' if configured else 'NO'}")
+    logger.info(f"GOOGLE_MAPS_API_KEY configured: {'YES' if configured else 'NO'}")
+    if configured:
+        logger.info(f"Key length: {len(key)}")
+        logger.info(f"Key prefix: {key[:5]}")
+    else:
+        logger.info("Key length: 0")
+        logger.info("Key prefix: N/A")
     logger.info("Demo mode: FALSE (Strict Live Production Mode)")
 
 
@@ -76,41 +82,92 @@ async def geocode_location(client: httpx.AsyncClient, region: str) -> Tuple[Opti
     """
     Geocodes region location string to (lat, lng).
     Uses Places Text Search API first for 100% key permission compatibility.
+    Logs HTTP status, Google API status/error, places count, and resolved lat/lng.
+    Raises explicit HTTPException if Google returns an authentication/permission/quota error.
     """
     api_key = get_api_key()
     if not api_key:
-        return None, None
+        raise HTTPException(
+            status_code=400,
+            detail="GOOGLE_MAPS_API_KEY is not configured in environment variables. Please set GOOGLE_MAPS_API_KEY in Render Dashboard."
+        )
+
+    logger.info(f"Executing location resolution query: '{region}'")
 
     # 1. Places Text Search API (Authorized on all Places API keys)
     text_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     params = {"query": region, "key": api_key}
     try:
         res = await client.get(text_url, params=params, timeout=10.0)
+        logger.info(f"Location resolution HTTP status: {res.status_code}")
         if res.status_code == 200:
             data = res.json()
-            if data.get("status") in ("OK", "ZERO_RESULTS") and data.get("results"):
-                loc = data["results"][0].get("geometry", {}).get("location", {})
+            api_status = data.get("status")
+            results = data.get("results", [])
+            logger.info(f"Google API geocoding status: {api_status}, number of places returned: {len(results)}")
+
+            if api_status in ("OK", "ZERO_RESULTS") and results:
+                loc = results[0].get("geometry", {}).get("location", {})
                 if "lat" in loc and "lng" in loc:
                     lat, lng = float(loc["lat"]), float(loc["lng"])
-                    logger.info(f"Geocoded '{region}' via Places TextSearch -> ({lat:.4f}, {lng:.4f})")
+                    logger.info(f"Resolved latitude: {lat:.6f}, resolved longitude: {lng:.6f}")
                     return lat, lng
+            elif api_status in ("REQUEST_DENIED", "OVER_QUERY_LIMIT", "INVALID_REQUEST"):
+                err_msg = data.get("error_message") or api_status
+                logger.error(f"Google API geocoding error response: status='{api_status}', detail='{err_msg}'")
+                if api_status == "REQUEST_DENIED":
+                    raise HTTPException(status_code=403, detail="Google Places API permission denied.")
+                elif api_status == "OVER_QUERY_LIMIT":
+                    raise HTTPException(status_code=429, detail="Google Places API quota or billing error.")
+                elif api_status == "INVALID_REQUEST":
+                    raise HTTPException(status_code=400, detail="Google Places request configuration error.")
+        elif res.status_code == 401:
+            raise HTTPException(status_code=401, detail="Google Places API authentication failed.")
+        elif res.status_code == 403:
+            raise HTTPException(status_code=403, detail="Google Places API permission denied.")
+        elif res.status_code in (402, 429):
+            raise HTTPException(status_code=429, detail="Google Places API quota or billing error.")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.warning(f"Places TextSearch Geocoding failed for '{region}': {e}")
+        logger.warning(f"Places TextSearch Geocoding exception for '{region}': {e}")
 
     # 2. Secondary Fallback: Geocoding API
     geo_url = "https://maps.googleapis.com/maps/api/geocode/json"
     try:
         res = await client.get(geo_url, params=params, timeout=10.0)
+        logger.info(f"Secondary Geocoding API HTTP status: {res.status_code}")
         if res.status_code == 200:
             data = res.json()
-            if data.get("status") == "OK" and data.get("results"):
-                loc = data["results"][0]["geometry"]["location"]
+            api_status = data.get("status")
+            results = data.get("results", [])
+            logger.info(f"Geocoding API status: {api_status}, number of places returned: {len(results)}")
+            if api_status == "OK" and results:
+                loc = results[0]["geometry"]["location"]
                 lat, lng = float(loc["lat"]), float(loc["lng"])
-                logger.info(f"Geocoded '{region}' via Geocoding API -> ({lat:.4f}, {lng:.4f})")
+                logger.info(f"Resolved latitude: {lat:.6f}, resolved longitude: {lng:.6f} via Geocoding API")
                 return lat, lng
+            elif api_status in ("REQUEST_DENIED", "OVER_QUERY_LIMIT", "INVALID_REQUEST"):
+                err_msg = data.get("error_message") or api_status
+                logger.error(f"Geocoding API status error: status='{api_status}', detail='{err_msg}'")
+                if api_status == "REQUEST_DENIED":
+                    raise HTTPException(status_code=403, detail="Google Places API permission denied.")
+                elif api_status == "OVER_QUERY_LIMIT":
+                    raise HTTPException(status_code=429, detail="Google Places API quota or billing error.")
+                elif api_status == "INVALID_REQUEST":
+                    raise HTTPException(status_code=400, detail="Google Places request configuration error.")
+        elif res.status_code == 401:
+            raise HTTPException(status_code=401, detail="Google Places API authentication failed.")
+        elif res.status_code == 403:
+            raise HTTPException(status_code=403, detail="Google Places API permission denied.")
+        elif res.status_code in (402, 429):
+            raise HTTPException(status_code=429, detail="Google Places API quota or billing error.")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning(f"Geocoding API call failed for '{region}': {e}")
 
+    logger.warning(f"Location resolution query '{region}' returned 0 geocoded places.")
     return None, None
 
 
@@ -277,13 +334,18 @@ async def fetch_grid_point_places(
     """
     Queries Google Places API for a specific grid coordinate with pagination support.
     Supports both Places API (New v1) and Places API (Legacy TextSearch) fallback.
+    Logs full diagnostic parameters for every request and raises explicit HTTP exceptions on Google errors.
     """
     api_key = get_api_key()
     if not api_key:
-        return []
+        raise HTTPException(
+            status_code=400,
+            detail="GOOGLE_MAPS_API_KEY is not configured in environment variables. Please set GOOGLE_MAPS_API_KEY in Render Dashboard."
+        )
 
     sub_radius_meters = min(float(sub_radius_km * 1000.0), 50000.0)
     point_results = []
+    new_api_failed_permanently = False
 
     # 1. Try Primary: Google Places API (New v1)
     new_url = "https://places.googleapis.com/v1/places:searchText"
@@ -294,7 +356,7 @@ async def fetch_grid_point_places(
     }
     page_token_new = None
 
-    for _ in range(MAX_PAGES_PER_POINT):
+    for page_idx in range(1, MAX_PAGES_PER_POINT + 1):
         if stats["api_requests"] >= MAX_API_REQUESTS_PER_SEARCH:
             break
 
@@ -314,11 +376,17 @@ async def fetch_grid_point_places(
         async with semaphore:
             try:
                 stats["api_requests"] += 1
+                logger.info(f"Executing Places API (New) Request #{stats['api_requests']}: endpoint='{new_url}', query='{query}', lat={lat:.6f}, lng={lng:.6f}, radius={sub_radius_meters}m, page={page_idx}")
                 res = await client.post(new_url, headers=headers, json=payload, timeout=12.0)
+                
                 if res.status_code == 200:
                     data = res.json()
+                    json_keys = list(data.keys())
                     raw_places = data.get("places", [])
                     stats["raw_places"] += len(raw_places)
+                    next_token = data.get("nextPageToken")
+                    
+                    logger.info(f"Places API (New) Response: HTTP status={res.status_code}, response JSON keys={json_keys}, places count={len(raw_places)}, nextPageToken present={'YES' if next_token else 'NO'}")
 
                     for p in raw_places:
                         place_id = p.get("id")
@@ -349,14 +417,35 @@ async def fetch_grid_point_places(
                             "source": "Google Places API",
                         })
 
-                    page_token_new = data.get("nextPageToken")
+                    page_token_new = next_token
                     if not page_token_new:
                         break
                     await asyncio.sleep(0.2)
                 else:
-                    break
+                    err_text = res.text[:300]
+                    logger.error(f"Places API (New v1) error response: HTTP status={res.status_code}, body='{err_text}'")
+                    if res.status_code == 401:
+                        raise HTTPException(status_code=401, detail="Google Places API authentication failed.")
+                    elif res.status_code == 403:
+                        raise HTTPException(status_code=403, detail="Google Places API permission denied.")
+                    elif res.status_code in (402, 429):
+                        raise HTTPException(status_code=429, detail="Google Places API quota or billing error.")
+                    elif res.status_code == 400:
+                        if "PERMISSION_DENIED" in err_text or "API_KEY_INVALID" in err_text:
+                            raise HTTPException(status_code=403, detail="Google Places API permission denied.")
+                        elif "BILLING_NOT_ENABLED" in err_text or "QUOTA_EXCEEDED" in err_text:
+                            raise HTTPException(status_code=429, detail="Google Places API quota or billing error.")
+                        else:
+                            new_api_failed_permanently = True
+                            break
+                    else:
+                        new_api_failed_permanently = True
+                        break
+            except HTTPException:
+                raise
             except Exception as e:
                 logger.warning(f"Places API (New) call exception: {e}")
+                new_api_failed_permanently = True
                 break
 
     if point_results:
@@ -366,7 +455,7 @@ async def fetch_grid_point_places(
     legacy_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     legacy_token = None
 
-    for _ in range(MAX_PAGES_PER_POINT):
+    for page_idx in range(1, MAX_PAGES_PER_POINT + 1):
         if stats["api_requests"] >= MAX_API_REQUESTS_PER_SEARCH:
             break
 
@@ -384,12 +473,20 @@ async def fetch_grid_point_places(
         async with semaphore:
             try:
                 stats["api_requests"] += 1
+                logger.info(f"Executing Places API (Legacy) Request #{stats['api_requests']}: endpoint='{legacy_url}', query='{query}', location='{lat:.6f},{lng:.6f}', radius={sub_radius_meters}m, page={page_idx}")
                 res = await client.get(legacy_url, params=params, timeout=12.0)
+                logger.info(f"Places API (Legacy) Response: HTTP status={res.status_code}")
+                
                 if res.status_code == 200:
                     data = res.json()
                     status = data.get("status")
+                    json_keys = list(data.keys())
+                    raw_results = data.get("results", [])
+                    next_token = data.get("next_page_token")
+                    
+                    logger.info(f"Places API (Legacy) Details: status='{status}', response JSON keys={json_keys}, places count={len(raw_results)}, nextPageToken present={'YES' if next_token else 'NO'}")
+
                     if status in ("OK", "ZERO_RESULTS"):
-                        raw_results = data.get("results", [])
                         stats["raw_places"] += len(raw_results)
 
                         for place in raw_results:
@@ -415,15 +512,37 @@ async def fetch_grid_point_places(
                                 "source": "Google Places API",
                             })
 
-                        legacy_token = data.get("next_page_token")
+                        legacy_token = next_token
                         if not legacy_token:
                             break
+                    elif status == "REQUEST_DENIED":
+                        err_msg = data.get("error_message") or "REQUEST_DENIED"
+                        logger.error(f"Legacy Places API REQUEST_DENIED: {err_msg}")
+                        raise HTTPException(status_code=403, detail="Google Places API permission denied.")
+                    elif status == "OVER_QUERY_LIMIT":
+                        err_msg = data.get("error_message") or "OVER_QUERY_LIMIT"
+                        logger.error(f"Legacy Places API OVER_QUERY_LIMIT: {err_msg}")
+                        raise HTTPException(status_code=429, detail="Google Places API quota or billing error.")
+                    elif status == "INVALID_REQUEST":
+                        err_msg = data.get("error_message") or "INVALID_REQUEST"
+                        logger.error(f"Legacy Places API INVALID_REQUEST: {err_msg}")
+                        raise HTTPException(status_code=400, detail="Google Places request configuration error.")
                     else:
+                        logger.warning(f"Legacy Places API returned unexpected status: {status}")
                         break
+                elif res.status_code == 401:
+                    raise HTTPException(status_code=401, detail="Google Places API authentication failed.")
+                elif res.status_code == 403:
+                    raise HTTPException(status_code=403, detail="Google Places API permission denied.")
+                elif res.status_code in (402, 429):
+                    raise HTTPException(status_code=429, detail="Google Places API quota or billing error.")
                 else:
+                    logger.error(f"Legacy Places API HTTP error {res.status_code}: {res.text[:300]}")
                     break
+            except HTTPException:
+                raise
             except Exception as e:
-                logger.error(f"Legacy Places API error: {e}")
+                logger.error(f"Legacy Places API error exception: {e}")
                 break
 
     return point_results
@@ -470,6 +589,8 @@ async def search_business_leads(
     if country and country.strip():
         geocode_parts.append(country.strip())
     geocode_query_str = ", ".join(geocode_parts)
+
+    logger.info(f"Final location query constructed by backend: '{geocode_query_str}'")
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         # 1. Geocode search location

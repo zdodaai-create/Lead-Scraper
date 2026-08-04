@@ -94,7 +94,7 @@ const Dashboard = ({ searchQuery }) => {
         setPage(1);
 
         if (!data.summary || data.summary.total_leads === 0) {
-          setSearchError('Google Places API returned 0 leads for this search. Please check your region/category or verify Places API permissions in Google Cloud Console.');
+          setSearchError('No businesses found for this search.');
         } else {
           setToast({
             message: `Found & enriched ${data.summary.total_leads} verified leads for ${params.region}!`,
