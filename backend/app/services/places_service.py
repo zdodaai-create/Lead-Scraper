@@ -1,4 +1,5 @@
 import os
+import asyncio
 import httpx
 import logging
 from typing import List, Dict, Any, Tuple, Optional
@@ -26,27 +27,36 @@ PLACES_NEW_FIELD_MASK = (
 
 
 def get_api_key() -> str:
-    """Loads GOOGLE_PLACES_API_KEY or GOOGLE_MAPS_API_KEY, prioritizing process env vars."""
-    key = os.environ.get("GOOGLE_PLACES_API_KEY") or os.environ.get("GOOGLE_MAPS_API_KEY")
+    """
+    Standardized API key loader.
+    Checks GOOGLE_MAPS_API_KEY first, with fallback to GOOGLE_PLACES_API_KEY.
+    Prioritizes process environment variables set in host environment (Render).
+    """
+    key = os.environ.get("GOOGLE_MAPS_API_KEY") or os.environ.get("GOOGLE_PLACES_API_KEY")
     if not key:
         load_dotenv()
-        key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY") or ""
+        key = os.getenv("GOOGLE_MAPS_API_KEY") or os.getenv("GOOGLE_PLACES_API_KEY") or ""
     return key.strip()
 
 
 def mask_key(key: str) -> str:
     """Masks API key for safe logging (e.g. AIzaSy...4A). Never prints full key."""
     if not key or len(key) < 8:
-        return "<EMPTY_KEY>"
+        return "<NOT_CONFIGURED>"
     return f"{key[:6]}...{key[-4:]}"
 
 
-def is_demo_mode_active() -> bool:
-    """Checks if DEMO_MODE is enabled, prioritizing process env vars."""
-    if "DEMO_MODE" in os.environ:
-        return os.environ["DEMO_MODE"].lower() == "true"
-    load_dotenv()
-    return os.getenv("DEMO_MODE", "false").lower() == "true"
+def log_places_configuration_status():
+    """Logs startup configuration status safely without exposing API keys."""
+    key = get_api_key()
+    configured = bool(key)
+    logger.info("=== LEAD FINDER API CONFIGURATION STATUS ===")
+    logger.info(f"Google Places key configured: {'YES' if configured else 'NO'}")
+    logger.info("Demo mode: FALSE (Strict Live Production Mode)")
+
+
+# Log configuration status on module initialization
+log_places_configuration_status()
 
 
 async def fetch_places_new_api(client: httpx.AsyncClient, query: str, max_results: int) -> Tuple[List[Dict[str, Any]], Optional[int], Optional[str]]:
@@ -59,7 +69,7 @@ async def fetch_places_new_api(client: httpx.AsyncClient, query: str, max_result
     """
     api_key = get_api_key()
     if not api_key:
-        return [], 400, "GOOGLE_PLACES_API_KEY is missing in backend/.env"
+        return [], 400, "GOOGLE_MAPS_API_KEY environment variable is not configured. Please set GOOGLE_MAPS_API_KEY in Render environment variables."
 
     url = "https://places.googleapis.com/v1/places:searchText"
     headers = {
@@ -72,11 +82,11 @@ async def fetch_places_new_api(client: httpx.AsyncClient, query: str, max_result
         "maxResultCount": min(max_results, 20)
     }
 
-    logger.info(f"Sending POST to Places API (New) with key {mask_key(api_key)} for query: '{query}'")
+    logger.info(f"Sending POST request to Google Places API (New) for query: '{query}'")
 
     try:
         res = await client.post(url, headers=headers, json=payload, timeout=12.0)
-        logger.info(f"Google Places API (New) Response Status: {res.status_code}")
+        logger.info(f"Google Places API (New) HTTP Status Code: {res.status_code}")
 
         if res.status_code == 200:
             data = res.json()
@@ -84,7 +94,9 @@ async def fetch_places_new_api(client: httpx.AsyncClient, query: str, max_result
             results = []
             for p in places_raw:
                 place_id = p.get("id")
+                # Reject any record without a valid Google Place ID
                 if not place_id:
+                    logger.warning("Skipping place result: missing Google Place ID")
                     continue
 
                 display_name = p.get("displayName", {}).get("text") or "Not Available"
@@ -119,11 +131,11 @@ async def fetch_places_new_api(client: httpx.AsyncClient, query: str, max_result
             except Exception:
                 msg = res.text
             
-            logger.error(f"Google Places API (New) Error Body [HTTP {res.status_code}]: {msg}")
+            logger.error(f"Google Places API (New) Error [HTTP {res.status_code}]: {msg}")
             return [], res.status_code, msg
 
     except Exception as e:
-        logger.error(f"HTTP Exception connecting to Google Places API (New): {e}")
+        logger.error(f"HTTP Connection error to Google Places API (New): {e}")
         return [], 500, str(e)
 
 
@@ -134,7 +146,7 @@ async def fetch_places_legacy_api(client: httpx.AsyncClient, query: str, radius_
     """
     api_key = get_api_key()
     if not api_key:
-        return [], 400, "GOOGLE_PLACES_API_KEY is missing in backend/.env"
+        return [], 400, "GOOGLE_MAPS_API_KEY environment variable is not configured."
 
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     params = {
@@ -155,7 +167,6 @@ async def fetch_places_legacy_api(client: httpx.AsyncClient, query: str, radius_
         if status not in ("OK", "ZERO_RESULTS"):
             err_msg = data.get("error_message") or f"Google Places API Status: {status}"
             logger.error(f"Google Places API (Legacy) Status Error: {err_msg}")
-            # Map legacy status strings to HTTP status codes
             code = 403 if status in ("REQUEST_DENIED", "OVER_QUERY_LIMIT") else 400
             return [], code, err_msg
 
@@ -167,6 +178,9 @@ async def fetch_places_legacy_api(client: httpx.AsyncClient, query: str, radius_
 
         for i, place in enumerate(raw_results):
             place_id = place.get("place_id")
+            if not place_id:
+                continue
+
             details = detail_responses[i] if (i < len(detail_responses) and isinstance(detail_responses[i], dict)) else {}
             location = place.get("geometry", {}).get("location", {})
 
@@ -212,30 +226,24 @@ async def fetch_place_details_legacy(client: httpx.AsyncClient, place_id: str) -
 
 async def search_business_leads(region: str, category: str, radius_km: float, max_results: int) -> List[Dict[str, Any]]:
     """
-    Primary discovery engine.
-    1. Queries Places API (New) v1 endpoint.
-    2. If fails with 404/not activated, attempts Legacy Text Search.
-    3. Preserves exact HTTP status code (400, 403, 429, 502) and error detail from Google Places API.
+    Primary business lead discovery engine.
+    Strictly uses real Google Places API data.
+    NO MOCK OR DEMO FALLBACKS ARE PERMITTED.
     """
     api_key = get_api_key()
-    demo_mode = is_demo_mode_active()
 
     if not api_key:
-        if demo_mode:
-            logger.info("Google Places API Key missing; DEMO_MODE is true. Generating demo leads.")
-            return generate_demo_leads(region, category, max_results)
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="Google Places API Key is missing. Please set GOOGLE_PLACES_API_KEY in backend/.env to retrieve live business leads."
-            )
+        raise HTTPException(
+            status_code=400,
+            detail="GOOGLE_MAPS_API_KEY is not configured in environment variables. Please set GOOGLE_MAPS_API_KEY in Render Dashboard."
+        )
 
     query = f"{category} in {region}"
     errors = []
     last_status_code = 400
 
     async with httpx.AsyncClient(timeout=12.0) as client:
-        # 1. Primary: Places API (New)
+        # 1. Primary: Places API (New v1)
         results, status_code_new, err_new = await fetch_places_new_api(client, query, max_results)
         if results:
             for item in results:
@@ -263,79 +271,15 @@ async def search_business_leads(region: str, category: str, radius_km: float, ma
             if status_code_leg and status_code_leg != 200:
                 last_status_code = status_code_leg
 
-    # Preserve exact Google HTTP error status code (400, 403, 429, 502)
-    if errors and not demo_mode:
+    # If Google Places returned an error, preserve exact HTTP error status and detail
+    if errors:
         combined_error = " | ".join(errors)
         logger.error(f"Google Places API Error (HTTP {last_status_code}): {combined_error}")
-        
-        # Map status code cleanly
         final_code = last_status_code if last_status_code in (400, 401, 403, 429, 500, 502, 503) else 400
         raise HTTPException(
             status_code=final_code,
             detail=f"Google Places API Error (HTTP {final_code}): {combined_error}"
         )
 
-    if demo_mode:
-        logger.info("Zero live results returned. DEMO_MODE is true; generating demo leads.")
-        return generate_demo_leads(region, category, max_results)
-
+    # Return empty list if Google Places returned zero results
     return []
-
-
-def generate_demo_leads(region: str, category: str, max_results: int) -> List[Dict[str, Any]]:
-    """
-    STRICTLY ISOLATED DEMO MODE ONLY.
-    Only executed if DEMO_MODE=true is explicitly set in environment.
-    """
-    mock_company_prefixes = [
-        "Apex", "TechVersal", "Innovate", "Starlight", "CyberCorp", "NextGen",
-        "CloudMatrix", "Quantum", "Omega", "Vanguard", "Pinnacle", "Aether"
-    ]
-    
-    mock_company_suffixes = [
-        "Technologies", "Solutions", "Labs", "Systems", "Softwares", "Digital"
-    ]
-
-    leads = []
-    import random
-    random.seed(hash(f"{region}_{category}"))
-
-    count = min(max_results, 15)
-    for i in range(1, count + 1):
-        prefix = random.choice(mock_company_prefixes)
-        suffix = random.choice(mock_company_suffixes)
-        company_name = f"{prefix} {suffix} (Demo)"
-        
-        domain_name = f"{prefix.lower()}{suffix.lower()[:4]}.com"
-        website = f"https://www.{domain_name}"
-        
-        phone = f"+91 44 2800{i:04d}"
-        role_email = f"info@{domain_name}"
-        rating = round(random.uniform(4.0, 4.9), 1)
-
-        lead = {
-            "company_name": company_name,
-            "category": category,
-            "phone": phone,
-            "email": role_email,
-            "website": website,
-            "address": f"Demo Park Suite #{i * 10}, {region}",
-            "city": region,
-            "state": None,
-            "country": "India",
-            "postal_code": "600001",
-            "latitude": 13.0827,
-            "longitude": 80.2707,
-            "rating": rating,
-            "review_count": i * 25,
-            "business_status": "OPERATIONAL",
-            "provider_place_id": f"demo_place_id_{i}",
-            "places_source": False,
-            "is_demo": True,
-            "google_maps_url": None,
-            "email_source_url": f"{website}/contact",
-            "source": "Demo Data",
-        }
-        leads.append(lead)
-
-    return leads

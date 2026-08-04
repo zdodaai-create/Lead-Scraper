@@ -151,7 +151,7 @@ async def execute_lead_search(
             email_source_url=item.get("email_source_url"),
             contact_page_url=item.get("contact_page_url"),
             google_maps_url=item.get("google_maps_url"),
-            source="Google Places API" if item.get("provider_place_id") and not item.get("is_demo") else "Demo Data",
+            source="Google Places API",
             lead_status="New",
             notes=None,
             collected_at=now_time,
@@ -176,7 +176,7 @@ async def execute_lead_search(
 
     return {
         "search": SearchOut.model_validate(db_search),
-        "demo_mode": is_demo_mode_active(),
+        "demo_mode": False,
         "summary": {
             "total_leads": total_leads,
             "with_phone": with_phone,

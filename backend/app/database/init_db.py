@@ -65,6 +65,36 @@ def init_db():
             db.commit()
 
         db.close()
+        
+        # Purge any legacy fake/demo lead records from database
+        db_clean: Session = SessionLocal()
+        try:
+            from app.models.lead import Lead
+            from sqlalchemy import or_
+            deleted_count = db_clean.query(Lead).filter(
+                or_(
+                    Lead.is_demo == True,
+                    Lead.provider_place_id.like("demo_%"),
+                    Lead.provider_place_id.like("ChIJ_place_id_%"),
+                    Lead.source == "Demo Data",
+                    Lead.company_name.like("%(Demo)%"),
+                    Lead.company_name.like("%Apex Technologies%"),
+                    Lead.company_name.like("%TechVersal Solutions%"),
+                    Lead.company_name.like("%Innovate Labs%"),
+                    Lead.company_name.like("%Starlight Systems%"),
+                    Lead.company_name.like("%CyberCorp%"),
+                    Lead.phone.like("+91 44 2800%")
+                )
+            ).delete(synchronize_session=False)
+            db_clean.commit()
+            if deleted_count > 0:
+                logger.info(f"Purged {deleted_count} legacy demo lead records from database.")
+        except Exception as clean_err:
+            db_clean.rollback()
+            logger.warning(f"Database demo cleanup warning: {clean_err}")
+        finally:
+            db_clean.close()
+
         logger.info("Database schema synchronized successfully.")
     except Exception as e:
         logger.error(f"Error initializing DB: {e}")
