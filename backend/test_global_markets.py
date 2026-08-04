@@ -9,7 +9,17 @@ logging.basicConfig(level=logging.INFO)
 
 TEST_CASES = [
     {
-        "test_name": "USA: Software Companies, San Francisco, California",
+        "test_name": "India: Tamil Nadu -> Chennai",
+        "country": "India",
+        "country_code": "IN",
+        "state": "Tamil Nadu",
+        "region": "Chennai",
+        "category": "Software Companies",
+        "radius_km": 20.0,
+        "max_results": 100
+    },
+    {
+        "test_name": "USA: California -> San Francisco",
         "country": "United States",
         "country_code": "US",
         "state": "California",
@@ -19,7 +29,17 @@ TEST_CASES = [
         "max_results": 100
     },
     {
-        "test_name": "Australia: Software Companies, Sydney, New South Wales",
+        "test_name": "USA: Texas -> Houston",
+        "country": "United States",
+        "country_code": "US",
+        "state": "Texas",
+        "region": "Houston",
+        "category": "Software Companies",
+        "radius_km": 20.0,
+        "max_results": 100
+    },
+    {
+        "test_name": "Australia: New South Wales -> Sydney",
         "country": "Australia",
         "country_code": "AU",
         "state": "New South Wales",
@@ -29,17 +49,7 @@ TEST_CASES = [
         "max_results": 100
     },
     {
-        "test_name": "Singapore: Software Companies, Singapore",
-        "country": "Singapore",
-        "country_code": "SG",
-        "state": None,
-        "region": "Singapore",
-        "category": "Software Companies",
-        "radius_km": 20.0,
-        "max_results": 100
-    },
-    {
-        "test_name": "Japan: Software Companies, Tokyo",
+        "test_name": "Japan: Tokyo -> Tokyo",
         "country": "Japan",
         "country_code": "JP",
         "state": "Tokyo",
@@ -49,7 +59,17 @@ TEST_CASES = [
         "max_results": 100
     },
     {
-        "test_name": "United Kingdom: Software Companies, London, England",
+        "test_name": "Japan: Osaka -> Osaka",
+        "country": "Japan",
+        "country_code": "JP",
+        "state": "Osaka",
+        "region": "Osaka",
+        "category": "Software Companies",
+        "radius_km": 20.0,
+        "max_results": 100
+    },
+    {
+        "test_name": "United Kingdom: England -> London",
         "country": "United Kingdom",
         "country_code": "GB",
         "state": "England",
@@ -57,13 +77,33 @@ TEST_CASES = [
         "category": "Software Companies",
         "radius_km": 20.0,
         "max_results": 100
+    },
+    {
+        "test_name": "United Kingdom: Scotland -> Edinburgh",
+        "country": "United Kingdom",
+        "country_code": "GB",
+        "state": "Scotland",
+        "region": "Edinburgh",
+        "category": "Software Companies",
+        "radius_km": 20.0,
+        "max_results": 100
+    },
+    {
+        "test_name": "Singapore: Whole Singapore Area -> Singapore",
+        "country": "Singapore",
+        "country_code": "SG",
+        "state": "Whole Singapore Area",
+        "region": "Singapore",
+        "category": "Software Companies",
+        "radius_km": 20.0,
+        "max_results": 100
     }
 ]
 
 
-async def run_added_countries_test_suite():
+async def run_full_location_audit_suite():
     print("\n==================================================================================")
-    print("         REAL PRODUCTION TEST SUITE FOR 5 NEWLY ADDED GLOBAL COUNTRIES           ")
+    print("      REAL PRODUCTION TEST SUITE FOR GLOBAL LOCATION DROPDOWN EXPANSION          ")
     print("==================================================================================\n")
 
     Base.metadata.create_all(bind=engine)
@@ -123,7 +163,7 @@ async def run_added_countries_test_suite():
                 print(f"    - Email Source URL:{email_src}")
 
         print("\n==================================================================================")
-        print("                  5 ADDED COUNTRIES TEST SUITE COMPLETED                          ")
+        print("                 GLOBAL LOCATION AUDIT SUITE COMPLETED                            ")
         print("==================================================================================")
 
     finally:
@@ -131,4 +171,4 @@ async def run_added_countries_test_suite():
 
 
 if __name__ == "__main__":
-    asyncio.run(run_added_countries_test_suite())
+    asyncio.run(run_full_location_audit_suite())

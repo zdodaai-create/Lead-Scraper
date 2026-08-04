@@ -1,34 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { LOCATION_DATA } from '../utils/locationData';
+import { LOCATION_REGISTRY, COUNTRY_META } from '../data/locations';
 import { BUSINESS_CATEGORIES, POPULAR_CATEGORIES } from '../utils/categoryData';
 import { Search, SlidersHorizontal, MapPin, Building2, Radius as RadiusIcon, Hash, Globe, Compass } from 'lucide-react';
-
-const ADMIN_LEVEL_1_LABELS = {
-  India: 'State / Union Territory',
-  'United States': 'State',
-  Australia: 'State / Territory',
-  Singapore: 'State / Division',
-  Japan: 'Prefecture',
-  'United Kingdom': 'Country / Region',
-};
-
-const ADMIN_LEVEL_2_LABELS = {
-  India: 'District / City',
-  'United States': 'City',
-  Australia: 'City',
-  Singapore: 'Region / Area',
-  Japan: 'City / Ward',
-  'United Kingdom': 'City',
-};
-
-const COUNTRY_CODES = {
-  India: 'IN',
-  'United States': 'US',
-  Australia: 'AU',
-  Singapore: 'SG',
-  Japan: 'JP',
-  'United Kingdom': 'GB',
-};
 
 const SearchForm = ({ onSubmit, loading }) => {
   const [selectedCountry, setSelectedCountry] = useState('India');
@@ -47,20 +20,26 @@ const SearchForm = ({ onSubmit, loading }) => {
   const [hasWebsite, setHasWebsite] = useState(false);
   const [hasEmail, setHasEmail] = useState(false);
 
-  const activeCountryCode = COUNTRY_CODES[selectedCountry] || 'IN';
-  const admin1Label = ADMIN_LEVEL_1_LABELS[selectedCountry] || 'State / Region';
-  const admin2Label = ADMIN_LEVEL_2_LABELS[selectedCountry] || 'District / City';
-  const isSingapore = selectedCountry === 'Singapore';
+  const countryMeta = COUNTRY_META[selectedCountry] || {
+    countryCode: 'IN',
+    adminLabel: 'State / Region',
+    localityLabel: 'District / City',
+  };
 
-  // Available States / Regions for selected country
-  const availableStates = Object.keys(LOCATION_DATA[selectedCountry] || {});
+  const activeCountryCode = countryMeta.countryCode;
+  const admin1Label = countryMeta.adminLabel;
+  const admin2Label = countryMeta.localityLabel;
 
-  // Cascading update when Country changes
+  // Divisions (States/Prefectures/Regions) for selected country
+  const currentDivisions = LOCATION_REGISTRY[selectedCountry]?.divisions || {};
+  const availableStates = Object.keys(currentDivisions);
+
+  // Cascading update & selection reset when Country changes
   useEffect(() => {
     if (availableStates.length > 0) {
       const defaultState = availableStates.includes('Tamil Nadu') ? 'Tamil Nadu' : availableStates[0];
       setSelectedState(defaultState);
-      const cities = LOCATION_DATA[selectedCountry]?.[defaultState] || [];
+      const cities = currentDivisions[defaultState] || [];
       if (cities.length > 0) {
         setSelectedCity(cities.includes('Chennai') ? 'Chennai' : cities[0]);
       } else {
@@ -70,10 +49,11 @@ const SearchForm = ({ onSubmit, loading }) => {
       setSelectedState('');
       setSelectedCity(selectedCountry);
     }
+    setCustomCity('');
   }, [selectedCountry]);
 
   // Cascading update when State changes
-  const availableCities = LOCATION_DATA[selectedCountry]?.[selectedState] || [];
+  const availableCities = currentDivisions[selectedState] || [];
   useEffect(() => {
     if (availableCities.length > 0) {
       setSelectedCity(availableCities[0]);
@@ -100,7 +80,7 @@ const SearchForm = ({ onSubmit, loading }) => {
     const payload = {
       country: selectedCountry,
       country_code: activeCountryCode,
-      state: isSingapore ? null : selectedState,
+      state: selectedState || null,
       region: finalRegion,
       category: finalCategory,
       radius_km: parseFloat(radiusKm) || 20,
@@ -128,11 +108,11 @@ const SearchForm = ({ onSubmit, loading }) => {
           </div>
         </div>
         <span class="hidden sm:inline-block text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full font-semibold">
-          🌍 Active Country: {selectedCountry} ({activeCountryCode})
+          🌍 Target: {selectedCountry} ({activeCountryCode})
         </span>
       </div>
 
-      {/* 3-Tier Location Dropdowns Row */}
+      {/* 3-Tier Dynamic Location Dropdowns Row */}
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
         {/* 1. Country Selection */}
         <div>
@@ -145,7 +125,7 @@ const SearchForm = ({ onSubmit, loading }) => {
             onChange={(e) => setSelectedCountry(e.target.value)}
             class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
           >
-            {Object.keys(LOCATION_DATA).map((country) => (
+            {Object.keys(LOCATION_REGISTRY).map((country) => (
               <option key={country} value={country}>
                 {country}
               </option>
@@ -153,38 +133,26 @@ const SearchForm = ({ onSubmit, loading }) => {
           </select>
         </div>
 
-        {/* 2. State / Province / Prefecture / Region */}
-        {!isSingapore ? (
-          <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <MapPin class="w-3.5 h-3.5 text-amber-400" />
-              2. {admin1Label} *
-            </label>
-            <select
-              value={selectedState}
-              onChange={(e) => setSelectedState(e.target.value)}
-              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
-            >
-              {availableStates.map((st) => (
-                <option key={st} value={st}>
-                  {st}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <MapPin class="w-3.5 h-3.5 text-slate-500" />
-              2. State / Division
-            </label>
-            <div class="w-full bg-slate-900/50 border border-slate-800 rounded-lg px-3 py-2 text-xs font-semibold text-slate-400">
-              Not Required (Singapore City-State)
-            </div>
-          </div>
-        )}
+        {/* 2. Admin Level 1 (State / Territory / Prefecture / Region) */}
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
+            <MapPin class="w-3.5 h-3.5 text-amber-400" />
+            2. {admin1Label} *
+          </label>
+          <select
+            value={selectedState}
+            onChange={(e) => setSelectedState(e.target.value)}
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+          >
+            {availableStates.map((st) => (
+              <option key={st} value={st}>
+                {st}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        {/* 3. District / City / Ward / Region Area */}
+        {/* 3. Admin Level 2 (City / Ward / District / Planning Area) */}
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
             <Compass class="w-3.5 h-3.5 text-emerald-400" />
@@ -200,7 +168,7 @@ const SearchForm = ({ onSubmit, loading }) => {
                 {cityItem}
               </option>
             ))}
-            <option value="Custom">Custom City / Area Name...</option>
+            <option value="Custom">Custom {admin2Label} Name...</option>
           </select>
 
           {selectedCity === 'Custom' && (
