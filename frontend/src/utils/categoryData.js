@@ -77,7 +77,9 @@ export const BUSINESS_CATEGORIES = {
     'Logistics & Freight Forwarders',
     'Warehousing & Cold Storage',
     'Courier & Express Cargo Services',
-    'Car Repair & Auto Garages'
+    'Car Repair & Auto Garages',
+    'Car Wash & Detailing',
+    'Auto Restoration & Customization'
   ]
 };
 
