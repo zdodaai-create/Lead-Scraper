@@ -565,7 +565,7 @@ async def search_business_leads(
 
     logger.info(f"POST /api/search RECEIVED PARAMS: region='{region}', state='{state}', country='{country}', country_code='{country_code}', category='{category}', radius_km={radius_km}, max_results={max_results}")
 
-    query = f"{category}"
+    query = f"{category} in {region}" if region else f"{category}"
     stats = {
         "grid_points": 0,
         "api_requests": 0,
@@ -586,7 +586,7 @@ async def search_business_leads(
 
     logger.info(f"Final location query constructed by backend: '{geocode_query_str}'")
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    async with httpx.AsyncClient(timeout=20.0) as client:
         # 1. Geocode search location
         center_lat, center_lng = await geocode_location(client, geocode_query_str)
         if center_lat is None or center_lng is None:
@@ -612,6 +612,8 @@ async def search_business_leads(
         for resp in grid_responses:
             if isinstance(resp, list):
                 all_raw_leads.extend(resp)
+            else:
+                logger.error(f"Grid point search returned exception: {resp}")
 
         # 3. Deduplicate STRICTLY by Google Place ID
         seen_place_ids = set()
@@ -643,6 +645,20 @@ async def search_business_leads(
                     in_radius_leads.append(item)
         else:
             in_radius_leads = unique_leads
+
+        # 5. Bulletproof Fail-safe: Direct Regional Text Query if grid/distance filter returned 0
+        if not in_radius_leads:
+            logger.warning(f"Grid search yielded 0 leads for '{category}' in '{geocode_query_str}'. Executing fail-safe direct regional text query...")
+            failsafe_query = f"{category} in {geocode_query_str}"
+            failsafe_results = await fetch_grid_point_places(
+                client, semaphore, failsafe_query, 0.0, 0.0, radius_km, stats
+            )
+            if isinstance(failsafe_results, list):
+                for item in failsafe_results:
+                    pid = item.get("provider_place_id")
+                    if pid and pid not in seen_place_ids:
+                        seen_place_ids.add(pid)
+                        in_radius_leads.append(item)
 
         # Add region & country context to items
         for item in in_radius_leads:
