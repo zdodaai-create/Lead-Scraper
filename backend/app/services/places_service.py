@@ -363,13 +363,15 @@ async def fetch_grid_point_places(
         payload = {
             "textQuery": query,
             "pageSize": 20,
-            "locationRestriction": {
+        }
+        if lat != 0.0 or lng != 0.0:
+            payload["locationRestriction"] = {
                 "circle": {
                     "center": {"latitude": lat, "longitude": lng},
                     "radius": sub_radius_meters
                 }
             }
-        }
+
         if page_token_new:
             payload["pageToken"] = page_token_new
 
@@ -426,19 +428,10 @@ async def fetch_grid_point_places(
                     logger.error(f"Places API (New v1) error response: HTTP status={res.status_code}, body='{err_text}'")
                     if res.status_code == 401:
                         raise HTTPException(status_code=401, detail="Google Places API authentication failed.")
-                    elif res.status_code == 403:
-                        raise HTTPException(status_code=403, detail="Google Places API permission denied.")
                     elif res.status_code in (402, 429):
                         raise HTTPException(status_code=429, detail="Google Places API quota or billing error.")
-                    elif res.status_code == 400:
-                        if "PERMISSION_DENIED" in err_text or "API_KEY_INVALID" in err_text:
-                            raise HTTPException(status_code=403, detail="Google Places API permission denied.")
-                        elif "BILLING_NOT_ENABLED" in err_text or "QUOTA_EXCEEDED" in err_text:
-                            raise HTTPException(status_code=429, detail="Google Places API quota or billing error.")
-                        else:
-                            new_api_failed_permanently = True
-                            break
                     else:
+                        logger.warning(f"Places API (New) returned HTTP {res.status_code}. Falling back to Legacy Places API.")
                         new_api_failed_permanently = True
                         break
             except HTTPException:
@@ -465,10 +458,11 @@ async def fetch_grid_point_places(
         else:
             params = {
                 "query": query,
-                "location": f"{lat},{lng}",
-                "radius": int(sub_radius_meters),
                 "key": api_key
             }
+            if lat != 0.0 or lng != 0.0:
+                params["location"] = f"{lat},{lng}"
+                params["radius"] = int(sub_radius_meters)
 
         async with semaphore:
             try:

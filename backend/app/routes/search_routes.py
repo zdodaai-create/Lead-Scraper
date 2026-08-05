@@ -180,15 +180,21 @@ async def execute_lead_search(
     with_website = sum(1 for l in saved_lead_objects if l.website and l.website != "Not Available")
     without_email = total_leads - with_email
 
+    filter_note = None
+    if total_leads == 0 and len(enriched_leads) > 0:
+        filter_note = f"Discovered {len(enriched_leads)} businesses, but 0 matched your active strict filters (e.g., Must Have Email / Minimum Rating). Try unchecking strict filters."
+
     return {
         "search": SearchOut.model_validate(db_search),
         "demo_mode": False,
         "summary": {
             "total_leads": total_leads,
+            "total_unfiltered": len(enriched_leads),
             "with_phone": with_phone,
             "with_email": with_email,
             "with_website": with_website,
-            "without_email": without_email
+            "without_email": without_email,
+            "filter_note": filter_note
         },
         "leads": [LeadOut.model_validate(l) for l in saved_lead_objects]
     }

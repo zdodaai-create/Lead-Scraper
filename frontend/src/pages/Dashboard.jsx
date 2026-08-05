@@ -94,7 +94,8 @@ const Dashboard = ({ searchQuery }) => {
         setPage(1);
 
         if (!data.summary || data.summary.total_leads === 0) {
-          setSearchError('No businesses found for this search.');
+          const note = data.summary?.filter_note || 'No businesses found for this search. Try expanding search radius or location.';
+          setSearchError(note);
         } else {
           setToast({
             message: `Found & enriched ${data.summary.total_leads} verified leads for ${params.region}!`,
@@ -253,29 +254,36 @@ const Dashboard = ({ searchQuery }) => {
 
   const safeSummary = summary || DEFAULT_SUMMARY;
 
+  const isNoResultsError = searchError.includes('No businesses found') || searchError.includes('matched your active strict filters') || searchError.includes('0 matched');
+  const isApiKeyError = searchError.includes('GOOGLE_MAPS_API_KEY') || searchError.includes('Google Places') || searchError.includes('API key');
+
   return (
-    <div class="space-y-6">
+    <div className="space-y-6">
       {/* Search Form */}
       <SearchForm onSubmit={handleSearchSubmit} loading={loading} />
 
-      {/* Error Alert Banner */}
+      {/* Status / Error Alert Banner */}
       {searchError && (
-        <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3 text-xs text-amber-300 shadow-md">
-          <AlertTriangle class="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-          <div class="flex-1">
-            <h4 class="font-bold text-amber-200 text-sm">
-              {searchError.includes('GOOGLE_MAPS_API_KEY') || searchError.includes('Google Places') || searchError.includes('API key')
-                ? 'Google Places API Status Message'
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3 text-xs text-amber-300 shadow-md">
+          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h4 className="font-bold text-amber-200 text-sm">
+              {isApiKeyError
+                ? 'Google Places API Configuration'
+                : isNoResultsError
+                ? 'Search Results Status'
                 : 'Backend Connection Status'}
             </h4>
-            <p class="mt-1 text-slate-200 font-mono text-[11px] bg-slate-950/60 p-2.5 rounded border border-slate-800 break-all">
+            <p className="mt-1 text-slate-200 font-mono text-[11px] bg-slate-950/60 p-2.5 rounded border border-slate-800 break-all">
               {searchError}
             </p>
-            <div class="mt-2 text-[11px] text-slate-400">
-              {searchError.includes('GOOGLE_MAPS_API_KEY') || searchError.includes('Google Places') || searchError.includes('API key') ? (
-                <span>💡 <strong>Note:</strong> Ensure <code>GOOGLE_MAPS_API_KEY</code> is properly configured in your Render environment variables.</span>
+            <div className="mt-2 text-[11px] text-slate-400">
+              {isApiKeyError ? (
+                <span>💡 <strong>Note:</strong> Ensure <code>GOOGLE_MAPS_API_KEY</code> is properly configured in environment variables.</span>
+              ) : isNoResultsError ? (
+                <span>💡 <strong>Tip:</strong> Expand search radius (e.g. 50-100 km), select a major district/city, or uncheck strict filters like "Must have Email".</span>
               ) : (
-                <span>💡 <strong>Note:</strong> Verify backend deployment status on Render at <code>https://lead-finder-single-app.onrender.com/health</code>.</span>
+                <span>💡 <strong>Note:</strong> Verify backend server status or check terminal logs.</span>
               )}
             </div>
           </div>
