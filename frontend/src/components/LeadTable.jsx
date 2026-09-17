@@ -133,15 +133,22 @@ const LeadTable = ({
                       />
                     </td>
 
-                    {/* Company Name */}
+                    {/* Company Name & Profile Contact */}
                     <td class="p-4 font-semibold text-white">
-                      <div class="flex items-center gap-2">
-                        <span class="max-w-[180px] truncate" title={lead.company_name}>
-                          {lead.company_name}
-                        </span>
-                        {lead.is_demo && (
-                          <span class="text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded">
-                            DEMO DATA
+                      <div class="flex flex-col gap-0.5">
+                        <div class="flex items-center gap-2">
+                          <span class="max-w-[180px] truncate" title={lead.company_name}>
+                            {lead.company_name}
+                          </span>
+                          {lead.is_demo && (
+                            <span class="text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded">
+                              DEMO DATA
+                            </span>
+                          )}
+                        </div>
+                        {lead.full_name && (
+                          <span class="text-[11px] font-normal text-slate-400 truncate max-w-[180px]" title={`${lead.full_name} - ${lead.title || ''}`}>
+                            👤 {lead.full_name} {lead.title ? `(${lead.title})` : ''}
                           </span>
                         )}
                       </div>
@@ -156,11 +163,11 @@ const LeadTable = ({
 
                     {/* Phone */}
                     <td class="p-4 font-mono text-slate-300">
-                      {lead.phone && lead.phone !== 'Not Available' ? (
+                      {(lead.phone_number || lead.phone) && (lead.phone_number || lead.phone) !== 'Not Available' ? (
                         <div class="flex items-center gap-1.5 group">
-                          <span>{lead.phone}</span>
+                          <span>{lead.phone_number || lead.phone}</span>
                           <button
-                            onClick={() => onCopyText(lead.phone, 'Phone number')}
+                            onClick={() => onCopyText(lead.phone_number || lead.phone, 'Phone number')}
                             title="Copy Phone"
                             class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-400 transition-opacity"
                           >
@@ -192,16 +199,16 @@ const LeadTable = ({
                       )}
                     </td>
 
-                    {/* Website */}
+                    {/* Website / Company URL */}
                     <td class="p-4">
-                      {lead.website && lead.website !== 'Not Available' ? (
+                      {(lead.company_url || lead.website) && (lead.company_url || lead.website) !== 'Not Available' ? (
                         <a
-                          href={lead.website}
+                          href={lead.company_url || lead.website}
                           target="_blank"
                           rel="noopener noreferrer"
                           class="inline-flex items-center gap-1 text-slate-300 hover:text-blue-400 transition-colors"
                         >
-                          <span class="truncate max-w-[120px]">{lead.website.replace(/^https?:\/\/(www\.)?/, '')}</span>
+                          <span class="truncate max-w-[120px]">{(lead.company_url || lead.website).replace(/^https?:\/\/(www\.)?/, '')}</span>
                           <ExternalLink class="w-3 h-3 text-slate-500" />
                         </a>
                       ) : (

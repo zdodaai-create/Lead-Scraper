@@ -97,14 +97,38 @@ async def execute_lead_search(
         if isinstance(res, dict):
             if item.get("phone") == "Not Available" and res.get("phone") != "Not Available":
                 item["phone"] = res["phone"]
+                item["phone_number"] = res["phone"]
             if res.get("email") and res.get("email") != "Not Available":
                 item["email"] = res["email"]
             if res.get("email_source_url"):
                 item["email_source_url"] = res["email_source_url"]
             if res.get("website_source_url"):
                 item["website_source_url"] = res["website_source_url"]
+                if not item.get("company_url"):
+                    item["company_url"] = res["website_source_url"]
             if res.get("contact_page_url"):
                 item["contact_page_url"] = res["contact_page_url"]
+            if res.get("profile_url"):
+                item["profile_url"] = res["profile_url"]
+            if res.get("full_name"):
+                item["full_name"] = res["full_name"]
+                item["first_name"] = res.get("first_name")
+                item["last_name"] = res.get("last_name")
+            if res.get("title"):
+                item["title"] = res["title"]
+
+        # Ensure fallback defaults for clean profile fields
+        phone_val = item.get("phone", "Not Available")
+        item["phone_number"] = item.get("phone_number") or (phone_val if phone_val != "Not Available" else None)
+        
+        web_val = item.get("website", "Not Available")
+        item["company_url"] = item.get("company_url") or (web_val if web_val != "Not Available" else None)
+        
+        maps_url = item.get("google_maps_url")
+        item["default_profile_url"] = item.get("default_profile_url") or maps_url
+        item["profile_url"] = item.get("profile_url") or item.get("default_profile_url") or maps_url
+        if not item.get("title"):
+            item["title"] = search_in.category
 
         enriched_leads.append(item)
 
@@ -157,6 +181,14 @@ async def execute_lead_search(
             email_source_url=item.get("email_source_url"),
             contact_page_url=item.get("contact_page_url"),
             google_maps_url=item.get("google_maps_url"),
+            profile_url=item.get("profile_url"),
+            full_name=item.get("full_name"),
+            first_name=item.get("first_name"),
+            last_name=item.get("last_name"),
+            title=item.get("title"),
+            company_url=item.get("company_url"),
+            phone_number=item.get("phone_number"),
+            default_profile_url=item.get("default_profile_url"),
             source="Google Places API",
             lead_status="New",
             notes=None,

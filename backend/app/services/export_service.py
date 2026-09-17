@@ -8,7 +8,15 @@ def generate_export_dataframe(leads: List[Lead]) -> pd.DataFrame:
     data = []
     for lead in leads:
         data.append({
+            "Profile URL": getattr(lead, "profile_url", None) or lead.google_maps_url or "",
+            "Full Name": getattr(lead, "full_name", None) or "",
+            "First Name": getattr(lead, "first_name", None) or "",
+            "Last Name": getattr(lead, "last_name", None) or "",
             "Company Name": lead.company_name,
+            "Job Title": getattr(lead, "title", None) or lead.category or "",
+            "Company URL": getattr(lead, "company_url", None) or lead.website or "",
+            "Phone Number": getattr(lead, "phone_number", None) or lead.phone or "",
+            "Default Profile URL": getattr(lead, "default_profile_url", None) or lead.google_maps_url or "",
             "Category": lead.category,
             "Phone": lead.phone or "Not Available",
             "Email": lead.email or "Not Available",

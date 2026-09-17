@@ -30,6 +30,16 @@ class LeadBase(BaseModel):
     source: str = "Google Places API"
     lead_status: str = "New"
     notes: Optional[str] = None
+    
+    # Core Profile Fields
+    profile_url: Optional[str] = None
+    full_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    title: Optional[str] = None
+    company_url: Optional[str] = None
+    phone_number: Optional[str] = None
+    default_profile_url: Optional[str] = None
 
 
 class LeadOut(LeadBase):

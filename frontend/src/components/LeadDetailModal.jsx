@@ -98,6 +98,70 @@ const LeadDetailModal = ({ lead, onClose, onSaveNotes, onUpdateStatus }) => {
             </div>
           </div>
 
+          {/* Target Profile Fields Overview */}
+          <div class="bg-slate-950/80 p-4 rounded-xl border border-blue-500/20 space-y-3 text-xs">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+              <LinkIcon class="w-4 h-4 text-blue-400" />
+              Scraped Profile Record Fields
+            </h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-300">
+              <div>
+                <span class="text-slate-500 block text-[11px]">Full Name:</span>
+                <span class="font-semibold text-white">{lead.full_name || <span class="text-slate-600 italic">Not Available</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">First Name / Last Name:</span>
+                <span class="font-medium text-slate-300">
+                  {lead.first_name ? `${lead.first_name} / ${lead.last_name || ''}` : <span class="text-slate-600 italic">Not Available</span>}
+                </span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Company Name:</span>
+                <span class="font-semibold text-white">{lead.company_name}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Job Title / Title:</span>
+                <span class="font-medium text-slate-300">{lead.title || lead.category || <span class="text-slate-600 italic">Not Available</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Company URL:</span>
+                {(lead.company_url || lead.website) && (lead.company_url || lead.website) !== 'Not Available' ? (
+                  <a href={lead.company_url || lead.website} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline truncate block">
+                    {lead.company_url || lead.website}
+                  </a>
+                ) : (
+                  <span class="text-slate-600 italic">Not Available</span>
+                )}
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Phone Number:</span>
+                <span class="font-mono text-emerald-400 font-semibold">
+                  {(lead.phone_number || lead.phone) && (lead.phone_number || lead.phone) !== 'Not Available' ? (lead.phone_number || lead.phone) : <span class="text-slate-600 italic">Not Available</span>}
+                </span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Profile URL:</span>
+                {(lead.profile_url || lead.contact_page_url || lead.google_maps_url) ? (
+                  <a href={lead.profile_url || lead.contact_page_url || lead.google_maps_url} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline truncate block">
+                    {lead.profile_url || lead.contact_page_url || lead.google_maps_url}
+                  </a>
+                ) : (
+                  <span class="text-slate-600 italic">Not Available</span>
+                )}
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Default Profile URL:</span>
+                {(lead.default_profile_url || lead.google_maps_url) ? (
+                  <a href={lead.default_profile_url || lead.google_maps_url} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline truncate block">
+                    {lead.default_profile_url || lead.google_maps_url}
+                  </a>
+                ) : (
+                  <span class="text-slate-600 italic">Not Available</span>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Place Verification Details */}
           <div class="bg-slate-950/40 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2">

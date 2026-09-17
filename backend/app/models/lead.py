@@ -28,6 +28,16 @@ class Lead(Base):
     review_count = Column(Integer, default=0, index=True)
     business_status = Column(String(50), default="OPERATIONAL")
     
+    # Core Profile Fields
+    profile_url = Column(String(500), nullable=True)
+    full_name = Column(String(255), nullable=True)
+    first_name = Column(String(100), nullable=True)
+    last_name = Column(String(100), nullable=True)
+    title = Column(String(150), nullable=True)
+    company_url = Column(String(500), nullable=True)
+    phone_number = Column(String(100), nullable=True)
+    default_profile_url = Column(String(500), nullable=True)
+    
     # Audit & Verification Fields
     provider_place_id = Column(String(255), index=True, nullable=True)
     places_source = Column(Boolean, default=True)

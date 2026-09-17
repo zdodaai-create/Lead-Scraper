@@ -51,7 +51,12 @@ async def enrich_lead_from_website(website_url: str) -> Dict[str, Optional[str]]
         "phone": "Not Available",
         "website_source_url": website_url if (website_url and website_url != "Not Available") else None,
         "email_source_url": None,
-        "contact_page_url": None
+        "contact_page_url": None,
+        "full_name": None,
+        "first_name": None,
+        "last_name": None,
+        "title": None,
+        "profile_url": None
     }
 
     if not website_url or website_url == "Not Available" or not website_url.startswith(("http://", "https://")):
@@ -65,6 +70,8 @@ async def enrich_lead_from_website(website_url: str) -> Dict[str, Optional[str]]
             found_emails_with_source = []
             found_phones = []
             contact_page = None
+            extracted_full_name = None
+            extracted_title = None
 
             async with httpx.AsyncClient(verify=False, timeout=WEBSITE_TIMEOUT_SECONDS) as client:
                 tasks = [fetch_page(client, urljoin(base_domain_url, path)) for path in TARGET_PATHS]
@@ -74,6 +81,20 @@ async def enrich_lead_from_website(website_url: str) -> Dict[str, Optional[str]]
                     if isinstance(res, tuple) and res[0]:
                         html_text, final_url = res
                         soup = BeautifulSoup(html_text, "lxml")
+
+                        # Try extracting published author / contact person name safely from meta tags
+                        if not extracted_full_name:
+                            author_tag = soup.find("meta", attrs={"name": lambda x: x and x.lower() in ("author", "owner", "contact")})
+                            if author_tag and author_tag.get("content"):
+                                val = author_tag["content"].strip()
+                                if 2 <= len(val.split()) <= 4 and not any(c in val for c in ["@", "http", ".com"]):
+                                    extracted_full_name = val
+
+                        # Try extracting job title from meta tags if available
+                        if not extracted_title:
+                            title_tag = soup.find("meta", attrs={"name": lambda x: x and x.lower() in ("author-title", "job-title", "role")})
+                            if title_tag and title_tag.get("content"):
+                                extracted_title = title_tag["content"].strip()
 
                         mailto_links = [
                             a.get("href").replace("mailto:", "").split("?")[0]
@@ -92,7 +113,7 @@ async def enrich_lead_from_website(website_url: str) -> Dict[str, Optional[str]]
                         if page_phones:
                             found_phones.extend(page_phones)
 
-                        if ("contact" in final_url.lower()) and not contact_page:
+                        if ("contact" in final_url.lower() or "about" in final_url.lower()) and not contact_page:
                             contact_page = final_url
 
             if found_emails_with_source:
@@ -106,6 +127,16 @@ async def enrich_lead_from_website(website_url: str) -> Dict[str, Optional[str]]
 
             if contact_page:
                 result["contact_page_url"] = contact_page
+                result["profile_url"] = contact_page
+
+            if extracted_full_name:
+                result["full_name"] = extracted_full_name
+                parts = extracted_full_name.split()
+                result["first_name"] = parts[0]
+                result["last_name"] = " ".join(parts[1:]) if len(parts) > 1 else None
+
+            if extracted_title:
+                result["title"] = extracted_title
 
         except Exception as e:
             logger.debug(f"Website enrichment error for {website_url}: {e}")

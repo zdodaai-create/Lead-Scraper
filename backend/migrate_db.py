@@ -30,7 +30,15 @@ def migrate_database():
             "contact_page_url": "VARCHAR(500)",
             "google_maps_url": "VARCHAR(500)",
             "source": "VARCHAR(100) DEFAULT 'Google Places API'",
-            "fetched_at": "DATETIME"
+            "fetched_at": "DATETIME",
+            "profile_url": "VARCHAR(500)",
+            "full_name": "VARCHAR(255)",
+            "first_name": "VARCHAR(100)",
+            "last_name": "VARCHAR(100)",
+            "title": "VARCHAR(150)",
+            "company_url": "VARCHAR(500)",
+            "phone_number": "VARCHAR(100)",
+            "default_profile_url": "VARCHAR(500)"
         }
 
         for col_name, col_type in required_columns.items():

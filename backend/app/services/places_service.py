@@ -286,9 +286,13 @@ async def fetch_place_details(client: httpx.AsyncClient, place_id: str) -> Dict[
             maps_url = p.get("googleMapsUri") or f"https://www.google.com/maps/place/?q=place_id:{place_id}"
             return {
                 "phone": phone,
+                "phone_number": phone if phone != "Not Available" else None,
                 "website": website,
+                "company_url": website if website != "Not Available" else None,
                 "address": address,
-                "google_maps_url": maps_url
+                "google_maps_url": maps_url,
+                "default_profile_url": maps_url,
+                "profile_url": maps_url
             }
     except Exception as e:
         logger.warning(f"Places API (New) Details failed for {place_id}: {e}")
@@ -312,9 +316,13 @@ async def fetch_place_details(client: httpx.AsyncClient, place_id: str) -> Dict[
                 maps_url = p.get("url") or f"https://www.google.com/maps/place/?q=place_id:{place_id}"
                 return {
                     "phone": phone,
+                    "phone_number": phone if phone != "Not Available" else None,
                     "website": website,
+                    "company_url": website if website != "Not Available" else None,
                     "address": address,
-                    "google_maps_url": maps_url
+                    "google_maps_url": maps_url,
+                    "default_profile_url": maps_url,
+                    "profile_url": maps_url
                 }
     except Exception as e:
         logger.warning(f"Legacy Place Details failed for {place_id}: {e}")
@@ -402,10 +410,13 @@ async def fetch_grid_point_places(
                         review_count = p.get("userRatingCount", 0)
                         location = p.get("location", {})
 
+                        maps_url = p.get("googleMapsUri") or f"https://www.google.com/maps/place/?q=place_id:{place_id}"
                         point_results.append({
                             "company_name": display_name,
                             "phone": phone,
+                            "phone_number": phone if phone != "Not Available" else None,
                             "website": website,
+                            "company_url": website if website != "Not Available" else None,
                             "address": address,
                             "latitude": location.get("latitude"),
                             "longitude": location.get("longitude"),
@@ -415,7 +426,13 @@ async def fetch_grid_point_places(
                             "provider_place_id": place_id,
                             "places_source": True,
                             "is_demo": False,
-                            "google_maps_url": p.get("googleMapsUri") or f"https://www.google.com/maps/place/?q=place_id:{place_id}",
+                            "google_maps_url": maps_url,
+                            "default_profile_url": maps_url,
+                            "profile_url": maps_url,
+                            "title": None,
+                            "full_name": None,
+                            "first_name": None,
+                            "last_name": None,
                             "source": "Google Places API",
                         })
 
@@ -488,11 +505,14 @@ async def fetch_grid_point_places(
                             if not place_id:
                                 continue
                             location = place.get("geometry", {}).get("location", {})
+                            maps_url = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
 
                             point_results.append({
                                 "company_name": place.get("name") or "Not Available",
                                 "phone": "Not Available",
+                                "phone_number": None,
                                 "website": "Not Available",
+                                "company_url": None,
                                 "address": place.get("formatted_address") or "Not Available",
                                 "latitude": location.get("lat"),
                                 "longitude": location.get("lng"),
@@ -502,7 +522,13 @@ async def fetch_grid_point_places(
                                 "provider_place_id": place_id,
                                 "places_source": True,
                                 "is_demo": False,
-                                "google_maps_url": f"https://www.google.com/maps/place/?q=place_id:{place_id}",
+                                "google_maps_url": maps_url,
+                                "default_profile_url": maps_url,
+                                "profile_url": maps_url,
+                                "title": None,
+                                "full_name": None,
+                                "first_name": None,
+                                "last_name": None,
                                 "source": "Google Places API",
                             })
 
@@ -663,6 +689,8 @@ async def search_business_leads(
         # Add region & country context to items
         for item in in_radius_leads:
             item["category"] = category
+            if not item.get("title"):
+                item["title"] = category
             item["city"] = region
             item["state"] = state
             item["country"] = country or "India"
@@ -691,12 +719,17 @@ async def search_business_leads(
                     target = leads_needing_enrichment[idx]
                     if res.get("phone") and res["phone"] != "Not Available":
                         target["phone"] = res["phone"]
+                        target["phone_number"] = res["phone"]
                     if res.get("website") and res["website"] != "Not Available":
                         target["website"] = res["website"]
+                        target["company_url"] = res["website"]
                     if res.get("address") and res["address"] != "Not Available":
                         target["address"] = res["address"]
                     if res.get("google_maps_url"):
                         target["google_maps_url"] = res["google_maps_url"]
+                        target["default_profile_url"] = res["google_maps_url"]
+                        if not target.get("profile_url"):
+                            target["profile_url"] = res["google_maps_url"]
 
         # Structured Metrics Logging
         logger.info("==================================================")
