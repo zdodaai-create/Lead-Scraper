@@ -31,15 +31,42 @@ class LeadBase(BaseModel):
     lead_status: str = "New"
     notes: Optional[str] = None
     
-    # Core Profile Fields
+    # Core & Extended Profile Fields (35 Scraping Export Attributes)
     profile_url: Optional[str] = None
     full_name: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     title: Optional[str] = None
+    company_id: Optional[str] = None
     company_url: Optional[str] = None
+    regular_company_url: Optional[str] = None
+    summary: Optional[str] = None
+    title_description: Optional[str] = None
+    industry: Optional[str] = None
+    company_location: Optional[str] = None
+    location: Optional[str] = None
+    duration_in_role: Optional[str] = None
+    duration_in_company: Optional[str] = None
+    past_experience_company_name: Optional[str] = None
+    past_experience_company_url: Optional[str] = None
+    past_experience_company_title: Optional[str] = None
+    past_experience_date: Optional[str] = None
+    past_experience_duration: Optional[str] = None
+    connection_degree: Optional[str] = None
+    profile_image_url: Optional[str] = None
+    shared_connections_count: Optional[int] = 0
+    name: Optional[str] = None
+    vmid: Optional[str] = None
+    linkedin_profile_url: Optional[str] = None
+    is_premium: Optional[bool] = False
+    is_open_link: Optional[bool] = False
+    query: Optional[str] = None
+    timestamp: Optional[str] = None
     phone_number: Optional[str] = None
     default_profile_url: Optional[str] = None
+    search_account_profile_id: Optional[str] = None
+    search_account_profile_name: Optional[str] = None
+    sys3_status: Optional[str] = None
 
 
 class LeadOut(LeadBase):

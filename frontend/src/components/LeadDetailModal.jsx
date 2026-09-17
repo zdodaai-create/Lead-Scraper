@@ -102,12 +102,12 @@ const LeadDetailModal = ({ lead, onClose, onSaveNotes, onUpdateStatus }) => {
           <div class="bg-slate-950/80 p-4 rounded-xl border border-blue-500/20 space-y-3 text-xs">
             <h4 class="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
               <LinkIcon class="w-4 h-4 text-blue-400" />
-              Scraped Profile Record Fields
+              Scraped Profile Record Fields (35 Export Attributes)
             </h4>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-300">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-slate-300">
               <div>
                 <span class="text-slate-500 block text-[11px]">Full Name:</span>
-                <span class="font-semibold text-white">{lead.full_name || <span class="text-slate-600 italic">Not Available</span>}</span>
+                <span class="font-semibold text-white">{lead.full_name || lead.name || <span class="text-slate-600 italic">Not Available</span>}</span>
               </div>
               <div>
                 <span class="text-slate-500 block text-[11px]">First Name / Last Name:</span>
@@ -120,44 +120,78 @@ const LeadDetailModal = ({ lead, onClose, onSaveNotes, onUpdateStatus }) => {
                 <span class="font-semibold text-white">{lead.company_name}</span>
               </div>
               <div>
-                <span class="text-slate-500 block text-[11px]">Job Title / Title:</span>
+                <span class="text-slate-500 block text-[11px]">Company ID:</span>
+                <span class="font-mono text-slate-300">{lead.company_id || <span class="text-slate-600 italic">N/A</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Job Title:</span>
                 <span class="font-medium text-slate-300">{lead.title || lead.category || <span class="text-slate-600 italic">Not Available</span>}</span>
               </div>
               <div>
-                <span class="text-slate-500 block text-[11px]">Company URL:</span>
-                {(lead.company_url || lead.website) && (lead.company_url || lead.website) !== 'Not Available' ? (
-                  <a href={lead.company_url || lead.website} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline truncate block">
-                    {lead.company_url || lead.website}
+                <span class="text-slate-500 block text-[11px]">Industry:</span>
+                <span class="font-medium text-slate-300">{lead.industry || lead.category || <span class="text-slate-600 italic">N/A</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Company Location:</span>
+                <span class="font-medium text-slate-300">{lead.company_location || lead.city || lead.address || <span class="text-slate-600 italic">N/A</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Location:</span>
+                <span class="font-medium text-slate-300">{lead.location || lead.city || lead.address || <span class="text-slate-600 italic">N/A</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Duration in Role:</span>
+                <span class="font-medium text-slate-300">{lead.duration_in_role || <span class="text-slate-600 italic">N/A</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Duration in Company:</span>
+                <span class="font-medium text-slate-300">{lead.duration_in_company || <span class="text-slate-600 italic">N/A</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Past Experience Company:</span>
+                <span class="font-medium text-slate-300">{lead.past_experience_company_name || <span class="text-slate-600 italic">N/A</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Past Experience Title:</span>
+                <span class="font-medium text-slate-300">{lead.past_experience_company_title || <span class="text-slate-600 italic">N/A</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Connection Degree:</span>
+                <span class="font-medium text-slate-300">{lead.connection_degree || <span class="text-slate-600 italic">N/A</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">LinkedIn Profile URL:</span>
+                {(lead.linkedin_profile_url || lead.profile_url) ? (
+                  <a href={lead.linkedin_profile_url || lead.profile_url} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline truncate block font-mono">
+                    {lead.linkedin_profile_url || lead.profile_url}
                   </a>
                 ) : (
                   <span class="text-slate-600 italic">Not Available</span>
                 )}
               </div>
               <div>
-                <span class="text-slate-500 block text-[11px]">Phone Number:</span>
-                <span class="font-mono text-emerald-400 font-semibold">
-                  {(lead.phone_number || lead.phone) && (lead.phone_number || lead.phone) !== 'Not Available' ? (lead.phone_number || lead.phone) : <span class="text-slate-600 italic">Not Available</span>}
+                <span class="text-slate-500 block text-[11px]">Company URL / Website:</span>
+                {(lead.company_url || lead.regular_company_url || lead.website) && (lead.company_url || lead.website) !== 'Not Available' ? (
+                  <a href={lead.company_url || lead.regular_company_url || lead.website} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline truncate block">
+                    {lead.company_url || lead.regular_company_url || lead.website}
+                  </a>
+                ) : (
+                  <span class="text-slate-600 italic">Not Available</span>
+                )}
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Sys3 Status:</span>
+                <span class="font-semibold text-emerald-400">{lead.sys3_status || lead.lead_status || 'New'}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">VMID:</span>
+                <span class="font-mono text-slate-400">{lead.vmid || <span class="text-slate-600 italic">N/A</span>}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Premium / Open Link:</span>
+                <span class="font-medium text-slate-300">
+                  {lead.is_premium ? 'Premium' : 'Standard'} / {lead.is_open_link ? 'Open Link' : 'Closed'}
                 </span>
-              </div>
-              <div>
-                <span class="text-slate-500 block text-[11px]">Profile URL:</span>
-                {(lead.profile_url || lead.contact_page_url || lead.google_maps_url) ? (
-                  <a href={lead.profile_url || lead.contact_page_url || lead.google_maps_url} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline truncate block">
-                    {lead.profile_url || lead.contact_page_url || lead.google_maps_url}
-                  </a>
-                ) : (
-                  <span class="text-slate-600 italic">Not Available</span>
-                )}
-              </div>
-              <div>
-                <span class="text-slate-500 block text-[11px]">Default Profile URL:</span>
-                {(lead.default_profile_url || lead.google_maps_url) ? (
-                  <a href={lead.default_profile_url || lead.google_maps_url} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline truncate block">
-                    {lead.default_profile_url || lead.google_maps_url}
-                  </a>
-                ) : (
-                  <span class="text-slate-600 italic">Not Available</span>
-                )}
               </div>
             </div>
           </div>
