@@ -11,6 +11,8 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+from app.services.name_extractor import derive_client_name
+
 # FieldMask for Places API (New v1)
 PLACES_NEW_FIELD_MASK = (
     "places.id,"
@@ -411,6 +413,7 @@ async def fetch_grid_point_places(
                         location = p.get("location", {})
 
                         maps_url = p.get("googleMapsUri") or f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+                        extracted_names = derive_client_name(display_name)
                         point_results.append({
                             "company_name": display_name,
                             "phone": phone,
@@ -430,9 +433,10 @@ async def fetch_grid_point_places(
                             "default_profile_url": maps_url,
                             "profile_url": maps_url,
                             "title": None,
-                            "full_name": None,
-                            "first_name": None,
-                            "last_name": None,
+                            "full_name": extracted_names["full_name"],
+                            "first_name": extracted_names["first_name"],
+                            "last_name": extracted_names["last_name"],
+                            "name": extracted_names["full_name"],
                             "source": "Google Places API",
                         })
 
@@ -507,8 +511,10 @@ async def fetch_grid_point_places(
                             location = place.get("geometry", {}).get("location", {})
                             maps_url = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
 
+                            cname = place.get("name") or "Not Available"
+                            extracted_names = derive_client_name(cname)
                             point_results.append({
-                                "company_name": place.get("name") or "Not Available",
+                                "company_name": cname,
                                 "phone": "Not Available",
                                 "phone_number": None,
                                 "website": "Not Available",
@@ -526,9 +532,10 @@ async def fetch_grid_point_places(
                                 "default_profile_url": maps_url,
                                 "profile_url": maps_url,
                                 "title": None,
-                                "full_name": None,
-                                "first_name": None,
-                                "last_name": None,
+                                "full_name": extracted_names["full_name"],
+                                "first_name": extracted_names["first_name"],
+                                "last_name": extracted_names["last_name"],
+                                "name": extracted_names["full_name"],
                                 "source": "Google Places API",
                             })
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ExternalLink, Phone, Mail, MapPin, Star, Calendar, ShieldCheck, Edit3, Save, AlertTriangle, Link as LinkIcon } from 'lucide-react';
+import { deriveClientName } from '../utils/nameExtractor';
 
 const LeadDetailModal = ({ lead, onClose, onSaveNotes, onUpdateStatus }) => {
   const [notes, setNotes] = useState('');
@@ -107,12 +108,12 @@ const LeadDetailModal = ({ lead, onClose, onSaveNotes, onUpdateStatus }) => {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-slate-300">
               <div>
                 <span class="text-slate-500 block text-[11px]">Full Name:</span>
-                <span class="font-semibold text-white">{lead.full_name || lead.name || <span class="text-slate-600 italic">Not Available</span>}</span>
+                <span class="font-semibold text-white">{lead.full_name || deriveClientName(lead).fullName}</span>
               </div>
               <div>
                 <span class="text-slate-500 block text-[11px]">First Name / Last Name:</span>
                 <span class="font-medium text-slate-300">
-                  {lead.first_name ? `${lead.first_name} / ${lead.last_name || ''}` : <span class="text-slate-600 italic">Not Available</span>}
+                  {lead.first_name ? `${lead.first_name} / ${lead.last_name || ''}` : `${deriveClientName(lead).firstName} / ${deriveClientName(lead).lastName}`}
                 </span>
               </div>
               <div>

@@ -73,6 +73,29 @@ def auto_migrate_sqlite():
                 logger.info(f"Auto-migrating missing SQLite column '{col_name}'...")
                 cursor.execute(f"ALTER TABLE leads ADD COLUMN {col_name} {col_type}")
 
+        # Auto-update any existing lead records missing derived client names
+        from app.services.name_extractor import derive_client_name
+        cursor.execute("SELECT id, company_name, email, full_name, first_name, last_name FROM leads")
+        rows = cursor.fetchall()
+        for row in rows:
+            lead_id, company_name, email, full_name, first_name, last_name = row
+            if not full_name or full_name in ("N/A", "Not Available") or not first_name or first_name in ("N/A", "Not Available"):
+                names = derive_client_name(
+                    company_name=company_name or "",
+                    email=email,
+                    existing_full=full_name,
+                    existing_first=first_name,
+                    existing_last=last_name
+                )
+                cursor.execute(
+                    """
+                    UPDATE leads
+                    SET full_name = ?, first_name = ?, last_name = ?, name = ?
+                    WHERE id = ?
+                    """,
+                    (names["full_name"], names["first_name"], names["last_name"], names["full_name"], lead_id)
+                )
+
         conn.commit()
         conn.close()
     except Exception as e:

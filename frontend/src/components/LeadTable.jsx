@@ -18,6 +18,7 @@ import {
   ChevronDown,
   UserCheck
 } from 'lucide-react';
+import { deriveClientName } from '../utils/nameExtractor';
 
 const statusBadgeColors = {
   New: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -113,12 +114,21 @@ const LeadTable = ({
           </a>
         ) : <span className="text-slate-600 italic">N/A</span>;
       }
-      case 'fullName':
-        return <span className="font-semibold text-white truncate block max-w-[150px]" title={lead.full_name || lead.name}>{lead.full_name || lead.name || 'N/A'}</span>;
-      case 'firstName':
-        return <span className="text-slate-300">{lead.first_name || 'N/A'}</span>;
-      case 'lastName':
-        return <span className="text-slate-300">{lead.last_name || 'N/A'}</span>;
+      case 'fullName': {
+        const derived = deriveClientName(lead);
+        const dispName = (lead.full_name && lead.full_name !== 'N/A' && lead.full_name !== 'Not Available') ? lead.full_name : derived.fullName;
+        return <span className="font-semibold text-white truncate block max-w-[150px]" title={dispName}>{dispName}</span>;
+      }
+      case 'firstName': {
+        const derived = deriveClientName(lead);
+        const dispFirst = (lead.first_name && lead.first_name !== 'N/A' && lead.first_name !== 'Not Available') ? lead.first_name : derived.firstName;
+        return <span className="text-slate-300 font-medium">{dispFirst}</span>;
+      }
+      case 'lastName': {
+        const derived = deriveClientName(lead);
+        const dispLast = (lead.last_name && lead.last_name !== 'N/A' && lead.last_name !== 'Not Available') ? lead.last_name : derived.lastName;
+        return <span className="text-slate-300 font-medium">{dispLast}</span>;
+      }
       case 'companyName':
         return (
           <div className="flex flex-col gap-0.5">
@@ -194,8 +204,11 @@ const LeadTable = ({
         ) : <span className="text-slate-600">N/A</span>;
       case 'sharedConnectionsCount':
         return <span className="font-mono text-slate-300">{lead.shared_connections_count || 0}</span>;
-      case 'name':
-        return <span className="font-medium text-slate-200">{lead.name || lead.full_name || 'N/A'}</span>;
+      case 'name': {
+        const derived = deriveClientName(lead);
+        const dispName = lead.name || lead.full_name || derived.fullName;
+        return <span className="font-medium text-slate-200">{dispName}</span>;
+      }
       case 'vmid':
         return <span className="font-mono text-slate-400 text-[11px]">{lead.vmid || 'N/A'}</span>;
       case 'linkedInProfileUrl': {

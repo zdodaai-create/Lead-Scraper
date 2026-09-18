@@ -2,17 +2,31 @@ import io
 import pandas as pd
 from typing import List
 from app.models.lead import Lead
+from app.services.name_extractor import derive_client_name
 
 
 def generate_export_dataframe(leads: List[Lead]) -> pd.DataFrame:
     data = []
     for lead in leads:
+        company_name = getattr(lead, "company_name", "") or ""
+        email = getattr(lead, "email", None)
+        extracted = derive_client_name(
+            company_name=company_name,
+            email=email,
+            existing_full=getattr(lead, "full_name", None),
+            existing_first=getattr(lead, "first_name", None),
+            existing_last=getattr(lead, "last_name", None)
+        )
+        full_name = extracted["full_name"]
+        first_name = extracted["first_name"]
+        last_name = extracted["last_name"]
+
         data.append({
             "profileUrl": getattr(lead, "profile_url", None) or getattr(lead, "google_maps_url", None) or "",
-            "fullName": getattr(lead, "full_name", None) or getattr(lead, "name", None) or "",
-            "firstName": getattr(lead, "first_name", None) or "",
-            "lastName": getattr(lead, "last_name", None) or "",
-            "companyName": getattr(lead, "company_name", "") or "",
+            "fullName": full_name,
+            "firstName": first_name,
+            "lastName": last_name,
+            "companyName": company_name,
             "title": getattr(lead, "title", None) or getattr(lead, "category", "") or "",
             "companyId": getattr(lead, "company_id", None) or "",
             "companyUrl": getattr(lead, "company_url", None) or getattr(lead, "website", None) or "",

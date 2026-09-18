@@ -15,6 +15,7 @@ from app.services.auth_service import get_current_user
 from app.services.places_service import search_business_leads
 from app.services.website_service import enrich_lead_from_website
 from app.services.deduplicator import deduplicate_leads, deduplicate_by_place_id
+from app.services.name_extractor import derive_client_name
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,19 @@ async def execute_lead_search(
         if not item.get("title"):
             item["title"] = search_in.category
 
+        # Ensure client/contact name fields are derived if missing
+        derived_names = derive_client_name(
+            company_name=item.get("company_name", ""),
+            email=item.get("email"),
+            existing_full=item.get("full_name"),
+            existing_first=item.get("first_name"),
+            existing_last=item.get("last_name")
+        )
+        item["full_name"] = derived_names["full_name"]
+        item["first_name"] = derived_names["first_name"]
+        item["last_name"] = derived_names["last_name"]
+        item["name"] = derived_names["full_name"]
+
         enriched_leads.append(item)
 
     # 5. Apply User Filter Parameters
@@ -185,6 +199,7 @@ async def execute_lead_search(
             full_name=item.get("full_name"),
             first_name=item.get("first_name"),
             last_name=item.get("last_name"),
+            name=item.get("name") or item.get("full_name"),
             title=item.get("title"),
             company_url=item.get("company_url"),
             phone_number=item.get("phone_number"),
